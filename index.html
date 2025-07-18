@@ -5,6 +5,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Livro + Comentários</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    #comment-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    #comment-form input,
+    #comment-form textarea {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    #comment-form button,
+    #login-btn {
+      padding: 10px;
+      background: #007bff;
+      border: none;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #comments {
+      margin-top: 20px;
+    }
+
+    .comment {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+    }
+
+    .timestamp {
+      font-size: 0.8em;
+      color: #666;
+      display: block;
+      margin-top: 5px;
+    }
+  </style>
 </head>
 <body>
 
@@ -29,8 +92,17 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
   <script>
+    // Detectar se está em um navegador bloqueado (como Instagram/Facebook/TikTok)
+    if (
+      navigator.userAgent.includes("FBAN") ||
+      navigator.userAgent.includes("FBAV") ||
+      navigator.userAgent.includes("Instagram")
+    ) {
+      alert("Por favor, abra este site em um navegador como Chrome, Firefox ou Safari para fazer login.");
+    }
+
     const firebaseConfig = {
-      apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",
+      apiKey: "AIzaSyCmEX1Z_QK7MbI0nrezwS57Cxo1uzcCy4",  // use sua API KEY válida
       authDomain: "comentarios-livro.firebaseapp.com",
       databaseURL: "https://comentarios-livro-default-rtdb.firebaseio.com",
       projectId: "comentarios-livro",
@@ -51,14 +123,13 @@
     const messageInput = document.getElementById("message");
     const commentsDiv = document.getElementById("comments");
 
-    const provider = new firebase.auth.GoogleAuthProvider();
-
-    // Agora com redirect (funciona em todos os navegadores)
+    // Login com redirect
     loginBtn.addEventListener("click", () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
       auth.signInWithRedirect(provider);
     });
 
-    // Verifica o login após o redirecionamento
+    // Pega resultado do login após redirect
     auth.getRedirectResult()
       .then(result => {
         if (result.user) {
@@ -67,9 +138,10 @@
         }
       })
       .catch(error => {
-        alert("Erro ao fazer login: " + error.message);
+        console.error("Erro ao autenticar:", error);
       });
 
+    // Enviar comentário
     form.addEventListener("submit", (e) => {
       e.preventDefault();
 
@@ -85,16 +157,15 @@
         name,
         message,
         timestamp: firebase.database.ServerValue.TIMESTAMP
-      })
-      .then(() => {
+      }).then(() => {
         messageInput.value = '';
         if (!user) nameInput.value = '';
-      })
-      .catch(error => {
+      }).catch(error => {
         alert("Erro ao enviar comentário: " + error.message);
       });
     });
 
+    // Mostrar comentários em tempo real
     commentsRef.on("value", (snapshot) => {
       commentsDiv.innerHTML = "";
 
@@ -104,7 +175,7 @@
         el.className = "comment";
         el.innerHTML = `
           <strong>${comment.name}</strong>: ${comment.message}
-          <span class="timestamp">(${new Date(comment.timestamp).toLocaleString()})</span>
+          <span class="timestamp">${new Date(comment.timestamp).toLocaleString()}</span>
         `;
         commentsDiv.prepend(el);
       });
