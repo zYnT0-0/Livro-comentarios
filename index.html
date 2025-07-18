@@ -68,56 +68,15 @@
       margin-top: 5px;
     }
 
-    /* Alerta estilizado */
-    #custom-alert {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.4);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      animation: fadeIn 0.3s ease forwards;
-    }
-
-    .alert-box {
-      background: #fff;
-      padding: 20px 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-      text-align: center;
-      max-width: 300px;
-      font-size: 16px;
-      line-height: 1.5;
-      transform: scale(0.8);
-      opacity: 0;
-      animation: popIn 0.3s ease forwards;
-    }
-
-    .alert-box button {
-      margin-top: 15px;
-      padding: 8px 16px;
+    /* Estilo para alerta personalizado */
+    .custom-alert {
       background: #007bff;
-      border: none;
       color: white;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    @keyframes fadeIn {
-      from { background: rgba(0,0,0,0); }
-      to   { background: rgba(0,0,0,0.4); }
-    }
-
-    @keyframes popIn {
-      from { opacity: 0; transform: scale(0.8); }
-      to   { opacity: 1; transform: scale(1); }
-    }
-
-    @keyframes fadeOut {
-      from { opacity: 1; transform: scale(1); }
-      to   { opacity: 0; transform: scale(0.8); }
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      margin-top: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
   </style>
 </head>
@@ -128,6 +87,7 @@
 
     <button id="login-btn">Entrar com Google</button>
     <p id="user-info"></p>
+    <div id="alert-box"></div>
 
     <form id="comment-form">
       <input type="text" id="name" placeholder="Seu nome (caso não esteja logado)" />
@@ -138,52 +98,20 @@
     <div id="comments"></div>
   </div>
 
-  <!-- Modal de alerta estilizado -->
-  <div id="custom-alert">
-    <div class="alert-box">
-      <p id="alert-message"></p>
-      <button onclick="closeAlert()">OK</button>
-    </div>
-  </div>
-
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
   <script>
-    function showAlert(msg) {
-      const alertBox = document.getElementById("custom-alert");
-      const alertContent = alertBox.querySelector(".alert-box");
-      const messageEl = document.getElementById("alert-message");
-
-      messageEl.innerHTML = msg;
-      alertBox.style.display = "flex";
-      alertContent.style.animation = "popIn 0.3s ease forwards";
-
-      // Fecha automático após 5 segundos
-      setTimeout(() => {
-        closeAlert();
-      }, 5000);
-    }
-
-    function closeAlert() {
-      const alertBox = document.getElementById("custom-alert");
-      const alertContent = alertBox.querySelector(".alert-box");
-
-      alertContent.style.animation = "fadeOut 0.3s ease forwards";
-      setTimeout(() => {
-        alertBox.style.display = "none";
-      }, 300);
-    }
-
+    // ⚠️ Aviso para navegadores não compatíveis (Instagram, TikTok, etc.)
     if (
       navigator.userAgent.includes("FBAN") ||
       navigator.userAgent.includes("FBAV") ||
       navigator.userAgent.includes("Instagram") ||
       navigator.userAgent.includes("TikTok")
     ) {
-      showAlert("⚠️ Para funcionar corretamente, abra este site em um navegador como Chrome, Firefox ou Safari.");
+      alert("⚠️ Para funcionar corretamente, abra este site em um navegador real como Chrome, Firefox ou Safari.");
     }
 
     const firebaseConfig = {
@@ -203,97 +131,87 @@
 
     const loginBtn = document.getElementById("login-btn");
     const userInfo = document.getElementById("user-info");
+    const alertBox = document.getElementById("alert-box");
     const form = document.getElementById("comment-form");
     const nameInput = document.getElementById("name");
     const messageInput = document.getElementById("message");
     const commentsDiv = document.getElementById("comments");
 
+    // 🔁 Forçar logout automático ao iniciar
+    auth.signOut().then(() => {
+      console.log("Sessão encerrada automaticamente no carregamento.");
+    });
+
+    // Função de alerta estilizado
+    function showCustomAlert(msg) {
+      alertBox.innerHTML = `<div class="custom-alert">${msg}</div>`;
+      setTimeout(() => alertBox.innerHTML = "", 4000);
+    }
+
+    // Login com redirect
     loginBtn.addEventListener("click", () => {
       const provider = new firebase.auth.GoogleAuthProvider();
       auth.signInWithRedirect(provider);
     });
 
+    // Verificar login após redirecionamento
     auth.getRedirectResult()
-      .then(async result => {
+      .then(result => {
         if (result.user) {
+          userInfo.textContent = `Logado como: ${result.user.displayName}`;
           loginBtn.style.display = "none";
-          const uid = result.user.uid;
-          const nomeSalvo = await db.ref("usuarios/" + uid + "/nome").once("value");
-          const nome = nomeSalvo.val();
-          userInfo.textContent = `Logado como: ${nome || result.user.displayName}`;
-          nameInput.style.display = "none";
-          showAlert("✅ Login concluído com sucesso!");
+          showCustomAlert("✅ Login realizado com sucesso!");
         }
       })
       .catch(error => {
-        showAlert("❌ Erro ao autenticar: " + error.message);
+        console.error("Erro ao autenticar:", error);
       });
 
-    auth.onAuthStateChanged(async user => {
-      if (user) {
-        loginBtn.style.display = "none";
-        const uid = user.uid;
-        const nomeSalvo = await db.ref("usuarios/" + uid + "/nome").once("value");
-        const nome = nomeSalvo.val();
-        userInfo.textContent = `Logado como: ${nome || user.displayName}`;
-        nameInput.style.display = "none";
-      }
-    });
-
+    // Enviar comentário
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const user = auth.currentUser;
       const inputName = nameInput.value.trim();
       const message = messageInput.value.trim();
-      if (!message || (!user && !inputName)) {
-        return showAlert("⚠️ Preencha todos os campos.");
+      const name = inputName || (user ? user.displayName : "");
+
+      if (!name || !message) {
+        return showCustomAlert("⚠️ Preencha todos os campos.");
       }
 
-      let finalName = inputName;
+      // Evitar nomes duplicados
+      const nameRef = db.ref("nomesUsados/" + name.replace(/\./g, "_"));
+      const snapshot = await nameRef.once("value");
 
-      if (user) {
-        const uid = user.uid;
-        const userRef = db.ref("usuarios/" + uid);
-        const nomeSnap = await userRef.child("nome").once("value");
+      if (snapshot.exists() && !user) {
+        return showCustomAlert("⚠️ Esse nome já está sendo usado. Use outro ou entre com sua conta.");
+      }
 
-        if (nomeSnap.exists()) {
-          finalName = nomeSnap.val();
-        } else {
-          if (!inputName) return showAlert("⚠️ Digite um nome.");
-          const nomeRepetido = await db.ref("nomesUsados/" + inputName).once("value");
-          if (nomeRepetido.exists()) return showAlert("⚠️ Este nome já está em uso.");
-
-          await userRef.child("nome").set(inputName);
-          await db.ref("nomesUsados/" + inputName).set(true);
-          finalName = inputName;
-          nameInput.style.display = "none";
-          userInfo.textContent = `Logado como: ${finalName}`;
-        }
-      } else {
-        const nomeRepetido = await db.ref("nomesUsados/" + finalName).once("value");
-        if (nomeRepetido.exists()) return showAlert("⚠️ Este nome já está em uso.");
-        await db.ref("nomesUsados/" + finalName).set(true);
+      if (!snapshot.exists()) {
+        await nameRef.set(true);
       }
 
       await commentsRef.push({
-        name: finalName,
+        name,
         message,
         timestamp: firebase.database.ServerValue.TIMESTAMP
       });
 
       messageInput.value = '';
       if (!user) nameInput.value = '';
-      showAlert("✅ Comentário enviado com sucesso!");
     });
 
+    // Mostrar comentários
     commentsRef.on("value", (snapshot) => {
       commentsDiv.innerHTML = "";
+
       snapshot.forEach(child => {
         const comment = child.val();
         const el = document.createElement("div");
         el.className = "comment";
 
+        // Data formatada (sem segundos)
         const date = new Date(comment.timestamp);
         const dia = String(date.getDate()).padStart(2, '0');
         const mes = String(date.getMonth() + 1).padStart(2, '0');
