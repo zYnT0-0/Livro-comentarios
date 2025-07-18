@@ -51,17 +51,24 @@
     const messageInput = document.getElementById("message");
     const commentsDiv = document.getElementById("comments");
 
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    // Agora com redirect (funciona em todos os navegadores)
     loginBtn.addEventListener("click", () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider)
-        .then(result => {
+      auth.signInWithRedirect(provider);
+    });
+
+    // Verifica o login após o redirecionamento
+    auth.getRedirectResult()
+      .then(result => {
+        if (result.user) {
           userInfo.textContent = `Logado como: ${result.user.displayName}`;
           loginBtn.style.display = "none";
-        })
-        .catch(error => {
-          alert("Erro ao fazer login: " + error.message);
-        });
-    });
+        }
+      })
+      .catch(error => {
+        alert("Erro ao fazer login: " + error.message);
+      });
 
     form.addEventListener("submit", (e) => {
       e.preventDefault();
