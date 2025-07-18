@@ -92,17 +92,18 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
   <script>
-    // Detectar se está em um navegador bloqueado (como Instagram/Facebook/TikTok)
+    // Aviso para abrir em navegador externo
     if (
       navigator.userAgent.includes("FBAN") ||
       navigator.userAgent.includes("FBAV") ||
-      navigator.userAgent.includes("Instagram")
+      navigator.userAgent.includes("Instagram") ||
+      navigator.userAgent.includes("TikTok")
     ) {
-      alert("Por favor, abra este site em um navegador como Chrome, Firefox ou Safari para fazer login.");
+      alert("⚠️ Para funcionar corretamente, abra este site em um navegador real como Chrome, Firefox ou Safari.");
     }
 
     const firebaseConfig = {
-      apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",  // use sua API KEY válida
+      apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",
       authDomain: "comentarios-livro.firebaseapp.com",
       databaseURL: "https://comentarios-livro-default-rtdb.firebaseio.com",
       projectId: "comentarios-livro",
@@ -123,7 +124,7 @@
     const messageInput = document.getElementById("message");
     const commentsDiv = document.getElementById("comments");
 
-    // Login com redirect
+    // Login com Redirect
     loginBtn.addEventListener("click", () => {
       const provider = new firebase.auth.GoogleAuthProvider();
       auth.signInWithRedirect(provider);
@@ -165,7 +166,7 @@
       });
     });
 
-    // Mostrar comentários em tempo real
+    // Mostrar comentários
     commentsRef.on("value", (snapshot) => {
       commentsDiv.innerHTML = "";
 
@@ -173,9 +174,19 @@
         const comment = child.val();
         const el = document.createElement("div");
         el.className = "comment";
+
+        // Formatar data SEM os segundos
+        const date = new Date(comment.timestamp);
+        const dia = String(date.getDate()).padStart(2, '0');
+        const mes = String(date.getMonth() + 1).padStart(2, '0');
+        const ano = date.getFullYear();
+        const hora = String(date.getHours()).padStart(2, '0');
+        const minutos = String(date.getMinutes()).padStart(2, '0');
+        const dataFormatada = `${dia}/${mes}/${ano} ${hora}:${minutos}`;
+
         el.innerHTML = `
           <strong>${comment.name}</strong>: ${comment.message}
-          <span class="timestamp">${new Date(comment.timestamp).toLocaleString()}</span>
+          <span class="timestamp">${dataFormatada}</span>
         `;
         commentsDiv.prepend(el);
       });
