@@ -78,7 +78,7 @@
     <p id="user-info"></p>
 
     <form id="comment-form">
-      <input type="text" id="name" placeholder="Seu nome (caso não esteja logado)" />
+      <input type="text" id="name" placeholder="Escolha seu nome" />
       <textarea id="message" placeholder="Seu comentário" required></textarea>
       <button type="submit">Enviar</button>
     </form>
@@ -92,16 +92,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
   <script>
-    // Aviso para abrir em navegador externo
-    if (
-      navigator.userAgent.includes("FBAN") ||
-      navigator.userAgent.includes("FBAV") ||
-      navigator.userAgent.includes("Instagram") ||
-      navigator.userAgent.includes("TikTok")
-    ) {
-      alert("⚠️ Para funcionar corretamente, abra este site em um navegador como Chrome, Firefox ou Safari.");
-    }
-
     const firebaseConfig = {
       apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",
       authDomain: "comentarios-livro.firebaseapp.com",
@@ -115,8 +105,8 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const auth = firebase.auth();
-    const commentsRef = db.ref("comentarios");
 
+    const commentsRef = db.ref("comentarios");
     const loginBtn = document.getElementById("login-btn");
     const userInfo = document.getElementById("user-info");
     const form = document.getElementById("comment-form");
@@ -124,18 +114,36 @@
     const messageInput = document.getElementById("message");
     const commentsDiv = document.getElementById("comments");
 
-    // Login com Redirect
+    // Aviso para navegadores embutidos
+    if (
+      navigator.userAgent.includes("FBAN") ||
+      navigator.userAgent.includes("FBAV") ||
+      navigator.userAgent.includes("Instagram") ||
+      navigator.userAgent.includes("TikTok")
+    ) {
+      alert("⚠️ Para funcionar corretamente, abra este site em um navegador como Chrome, Firefox ou Safari.");
+    }
+
     loginBtn.addEventListener("click", () => {
       const provider = new firebase.auth.GoogleAuthProvider();
       sessionStorage.setItem("justLoggedIn", "true");
       auth.signInWithRedirect(provider);
     });
 
-    // Detecta se o usuário está logado
-    auth.onAuthStateChanged((user) => {
+    auth.onAuthStateChanged(async (user) => {
       if (user) {
-        userInfo.textContent = `Você está logado como: ${user.displayName}`;
         loginBtn.style.display = "none";
+        userInfo.textContent = `Logado como: ${user.email}`;
+        const userRef = db.ref(`usuarios/${user.uid}/nomeEscolhido`);
+        const snapshot = await userRef.once("value");
+
+        if (snapshot.exists()) {
+          nameInput.style.display = "none";
+          nameInput.value = snapshot.val(); // já usa o nome salvo
+        } else {
+          nameInput.style.display = "block";
+          alert("👋 Primeiro acesso: escolha o nome que você usará nos comentários.");
+        }
 
         if (sessionStorage.getItem("justLoggedIn")) {
           alert("✅ Login concluído com sucesso!");
@@ -144,50 +152,59 @@
       } else {
         loginBtn.style.display = "block";
         userInfo.textContent = "";
+        nameInput.style.display = "block";
       }
     });
 
-    // Enviar comentário
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const user = auth.currentUser;
       const inputName = nameInput.value.trim();
       const message = messageInput.value.trim();
-      const name = inputName || (user ? user.displayName : "");
 
-      if (!name || !message) {
+      if (!message || (!user && !inputName)) {
         return alert("Preencha todos os campos.");
       }
 
-      const nameRef = db.ref("nomesUsados/" + name.replace(/\./g, "_"));
+      let finalName = inputName;
 
-      try {
-        const snapshot = await nameRef.once("value");
+      if (user) {
+        const userRef = db.ref(`usuarios/${user.uid}/nomeEscolhido`);
+        const nomeUsadoRef = db.ref("nomesUsados/" + inputName.replace(/\./g, "_"));
 
-        if (snapshot.exists() && !user) {
-          return alert("Esse nome já está sendo usado por outro usuário. Escolha outro nome ou entre com sua conta.");
-        }
+        const snapshot = await userRef.once("value");
 
         if (!snapshot.exists()) {
-          await nameRef.set(true);
+          const nameCheck = await nomeUsadoRef.once("value");
+          if (nameCheck.exists()) {
+            return alert("⚠️ Esse nome já está sendo usado por outro usuário.");
+          }
+
+          await nomeUsadoRef.set(user.uid);
+          await userRef.set(inputName);
         }
 
-        await commentsRef.push({
-          name,
-          message,
-          timestamp: firebase.database.ServerValue.TIMESTAMP
-        });
+        finalName = (await userRef.once("value")).val();
+      } else {
+        const nameCheck = await db.ref("nomesUsados/" + inputName.replace(/\./g, "_")).once("value");
+        if (nameCheck.exists()) {
+          return alert("⚠️ Esse nome já está sendo usado por outro usuário.");
+        }
 
-        messageInput.value = '';
-        if (!user) nameInput.value = '';
-
-      } catch (error) {
-        alert("Erro ao enviar comentário: " + error.message);
+        await db.ref("nomesUsados/" + inputName.replace(/\./g, "_")).set(true);
       }
+
+      await commentsRef.push({
+        name: finalName,
+        message: message,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      });
+
+      messageInput.value = '';
+      if (!user) nameInput.value = '';
     });
 
-    // Mostrar comentários
     commentsRef.on("value", (snapshot) => {
       commentsDiv.innerHTML = "";
 
