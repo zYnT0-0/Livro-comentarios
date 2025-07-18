@@ -1,0 +1,99 @@
+<!DOCTYPE html><html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comentários</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Deixe seu comentário</h1><button id="login-btn">Entrar com Google</button>
+<p id="user-info"></p>
+
+<form id="comment-form">
+  <input type="text" id="name" placeholder="Seu nome (usado apenas se não estiver logado)" />
+  <textarea id="message" placeholder="Seu comentário" required></textarea>
+  <button type="submit">Enviar</button>
+</form>
+
+<div id="comments"></div>
+
+  </div>  <!-- Firebase SDK -->  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCmEX1Z_OK7MbI0nrezwS57Cxo1uzcCy4",
+      authDomain: "comentarios-livro.firebaseapp.com",
+      databaseURL: "https://comentarios-livro-default-rtdb.firebaseio.com",
+      projectId: "comentarios-livro",
+      storageBucket: "comentarios-livro.appspot.com",
+      messagingSenderId: "702096545512",
+      appId: "1:702096545512:web:f7f305fe579d246c41b5d"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+    const commentsRef = db.ref('comentarios');
+
+    const form = document.getElementById('comment-form');
+    const nameInput = document.getElementById('name');
+    const messageInput = document.getElementById('message');
+    const commentsDiv = document.getElementById('comments');
+    const loginBtn = document.getElementById('login-btn');
+    const userInfo = document.getElementById('user-info');
+
+    loginBtn.addEventListener('click', () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+        .then(result => {
+          userInfo.textContent = `Logado como: ${result.user.displayName}`;
+          loginBtn.style.display = 'none';
+        })
+        .catch(error => {
+          alert('Erro ao fazer login: ' + error.message);
+        });
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const user = auth.currentUser;
+      const name = user ? user.displayName : nameInput.value.trim();
+      const message = messageInput.value.trim();
+
+      if (!name || !message) {
+        return alert('Preencha todos os campos.');
+      }
+
+      commentsRef.push({
+        name,
+        message,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      })
+      .then(() => {
+        messageInput.value = '';
+        if (!user) nameInput.value = '';
+      })
+      .catch(error => {
+        alert('Erro ao enviar comentário: ' + error.message);
+      });
+    });
+
+    commentsRef.on('value', (snapshot) => {
+      commentsDiv.innerHTML = '';
+
+      snapshot.forEach(child => {
+        const comment = child.val();
+        const commentEl = document.createElement('p');
+
+        commentEl.innerHTML = `
+          <div class="comment-content">
+            <strong>${comment.name}</strong>: ${comment.message}
+          </div>
+          <span class="timestamp">(${new Date(comment.timestamp).toLocaleString()})</span>
+        `;
+
+        commentsDiv.prepend(commentEl);
+      });
+    });
+  </script></body>
+</html>
