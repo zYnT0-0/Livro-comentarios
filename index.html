@@ -67,6 +67,58 @@
       display: block;
       margin-top: 5px;
     }
+
+    /* Alerta estilizado */
+    #custom-alert {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      animation: fadeIn 0.3s ease forwards;
+    }
+
+    .alert-box {
+      background: #fff;
+      padding: 20px 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      max-width: 300px;
+      font-size: 16px;
+      line-height: 1.5;
+      transform: scale(0.8);
+      opacity: 0;
+      animation: popIn 0.3s ease forwards;
+    }
+
+    .alert-box button {
+      margin-top: 15px;
+      padding: 8px 16px;
+      background: #007bff;
+      border: none;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    @keyframes fadeIn {
+      from { background: rgba(0,0,0,0); }
+      to   { background: rgba(0,0,0,0.4); }
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; transform: scale(1); }
+      to   { opacity: 0; transform: scale(0.8); }
+    }
   </style>
 </head>
 <body>
@@ -78,12 +130,20 @@
     <p id="user-info"></p>
 
     <form id="comment-form">
-      <input type="text" id="name" placeholder="Escolha seu nome" />
+      <input type="text" id="name" placeholder="Seu nome (caso não esteja logado)" />
       <textarea id="message" placeholder="Seu comentário" required></textarea>
       <button type="submit">Enviar</button>
     </form>
 
     <div id="comments"></div>
+  </div>
+
+  <!-- Modal de alerta estilizado -->
+  <div id="custom-alert">
+    <div class="alert-box">
+      <p id="alert-message"></p>
+      <button onclick="closeAlert()">OK</button>
+    </div>
   </div>
 
   <!-- Firebase SDKs -->
@@ -92,6 +152,40 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
   <script>
+    function showAlert(msg) {
+      const alertBox = document.getElementById("custom-alert");
+      const alertContent = alertBox.querySelector(".alert-box");
+      const messageEl = document.getElementById("alert-message");
+
+      messageEl.innerHTML = msg;
+      alertBox.style.display = "flex";
+      alertContent.style.animation = "popIn 0.3s ease forwards";
+
+      // Fecha automático após 5 segundos
+      setTimeout(() => {
+        closeAlert();
+      }, 5000);
+    }
+
+    function closeAlert() {
+      const alertBox = document.getElementById("custom-alert");
+      const alertContent = alertBox.querySelector(".alert-box");
+
+      alertContent.style.animation = "fadeOut 0.3s ease forwards";
+      setTimeout(() => {
+        alertBox.style.display = "none";
+      }, 300);
+    }
+
+    if (
+      navigator.userAgent.includes("FBAN") ||
+      navigator.userAgent.includes("FBAV") ||
+      navigator.userAgent.includes("Instagram") ||
+      navigator.userAgent.includes("TikTok")
+    ) {
+      showAlert("⚠️ Para funcionar corretamente, abra este site em um navegador como Chrome, Firefox ou Safari.");
+    }
+
     const firebaseConfig = {
       apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",
       authDomain: "comentarios-livro.firebaseapp.com",
@@ -105,8 +199,8 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const auth = firebase.auth();
-
     const commentsRef = db.ref("comentarios");
+
     const loginBtn = document.getElementById("login-btn");
     const userInfo = document.getElementById("user-info");
     const form = document.getElementById("comment-form");
@@ -114,45 +208,35 @@
     const messageInput = document.getElementById("message");
     const commentsDiv = document.getElementById("comments");
 
-    // Aviso para navegadores embutidos
-    if (
-      navigator.userAgent.includes("FBAN") ||
-      navigator.userAgent.includes("FBAV") ||
-      navigator.userAgent.includes("Instagram") ||
-      navigator.userAgent.includes("TikTok")
-    ) {
-      alert("⚠️ Para funcionar corretamente, abra este site em um navegador como Chrome, Firefox ou Safari.");
-    }
-
     loginBtn.addEventListener("click", () => {
       const provider = new firebase.auth.GoogleAuthProvider();
-      sessionStorage.setItem("justLoggedIn", "true");
       auth.signInWithRedirect(provider);
     });
 
-    auth.onAuthStateChanged(async (user) => {
+    auth.getRedirectResult()
+      .then(async result => {
+        if (result.user) {
+          loginBtn.style.display = "none";
+          const uid = result.user.uid;
+          const nomeSalvo = await db.ref("usuarios/" + uid + "/nome").once("value");
+          const nome = nomeSalvo.val();
+          userInfo.textContent = `Logado como: ${nome || result.user.displayName}`;
+          nameInput.style.display = "none";
+          showAlert("✅ Login concluído com sucesso!");
+        }
+      })
+      .catch(error => {
+        showAlert("❌ Erro ao autenticar: " + error.message);
+      });
+
+    auth.onAuthStateChanged(async user => {
       if (user) {
         loginBtn.style.display = "none";
-        userInfo.textContent = `Logado como: ${user.email}`;
-        const userRef = db.ref(`usuarios/${user.uid}/nomeEscolhido`);
-        const snapshot = await userRef.once("value");
-
-        if (snapshot.exists()) {
-          nameInput.style.display = "none";
-          nameInput.value = snapshot.val(); // já usa o nome salvo
-        } else {
-          nameInput.style.display = "block";
-          alert("👋 Primeiro acesso: escolha o nome que você usará nos comentários.");
-        }
-
-        if (sessionStorage.getItem("justLoggedIn")) {
-          alert("✅ Login concluído com sucesso!");
-          sessionStorage.removeItem("justLoggedIn");
-        }
-      } else {
-        loginBtn.style.display = "block";
-        userInfo.textContent = "";
-        nameInput.style.display = "block";
+        const uid = user.uid;
+        const nomeSalvo = await db.ref("usuarios/" + uid + "/nome").once("value");
+        const nome = nomeSalvo.val();
+        userInfo.textContent = `Logado como: ${nome || user.displayName}`;
+        nameInput.style.display = "none";
       }
     });
 
@@ -162,52 +246,49 @@
       const user = auth.currentUser;
       const inputName = nameInput.value.trim();
       const message = messageInput.value.trim();
-
       if (!message || (!user && !inputName)) {
-        return alert("Preencha todos os campos.");
+        return showAlert("⚠️ Preencha todos os campos.");
       }
 
       let finalName = inputName;
 
       if (user) {
-        const userRef = db.ref(`usuarios/${user.uid}/nomeEscolhido`);
-        const nomeUsadoRef = db.ref("nomesUsados/" + inputName.replace(/\./g, "_"));
+        const uid = user.uid;
+        const userRef = db.ref("usuarios/" + uid);
+        const nomeSnap = await userRef.child("nome").once("value");
 
-        const snapshot = await userRef.once("value");
+        if (nomeSnap.exists()) {
+          finalName = nomeSnap.val();
+        } else {
+          if (!inputName) return showAlert("⚠️ Digite um nome.");
+          const nomeRepetido = await db.ref("nomesUsados/" + inputName).once("value");
+          if (nomeRepetido.exists()) return showAlert("⚠️ Este nome já está em uso.");
 
-        if (!snapshot.exists()) {
-          const nameCheck = await nomeUsadoRef.once("value");
-          if (nameCheck.exists()) {
-            return alert("⚠️ Esse nome já está sendo usado por outro usuário.");
-          }
-
-          await nomeUsadoRef.set(user.uid);
-          await userRef.set(inputName);
+          await userRef.child("nome").set(inputName);
+          await db.ref("nomesUsados/" + inputName).set(true);
+          finalName = inputName;
+          nameInput.style.display = "none";
+          userInfo.textContent = `Logado como: ${finalName}`;
         }
-
-        finalName = (await userRef.once("value")).val();
       } else {
-        const nameCheck = await db.ref("nomesUsados/" + inputName.replace(/\./g, "_")).once("value");
-        if (nameCheck.exists()) {
-          return alert("⚠️ Esse nome já está sendo usado por outro usuário.");
-        }
-
-        await db.ref("nomesUsados/" + inputName.replace(/\./g, "_")).set(true);
+        const nomeRepetido = await db.ref("nomesUsados/" + finalName).once("value");
+        if (nomeRepetido.exists()) return showAlert("⚠️ Este nome já está em uso.");
+        await db.ref("nomesUsados/" + finalName).set(true);
       }
 
       await commentsRef.push({
         name: finalName,
-        message: message,
+        message,
         timestamp: firebase.database.ServerValue.TIMESTAMP
       });
 
       messageInput.value = '';
       if (!user) nameInput.value = '';
+      showAlert("✅ Comentário enviado com sucesso!");
     });
 
     commentsRef.on("value", (snapshot) => {
       commentsDiv.innerHTML = "";
-
       snapshot.forEach(child => {
         const comment = child.val();
         const el = document.createElement("div");
