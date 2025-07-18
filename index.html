@@ -143,30 +143,48 @@
       });
 
     // Enviar comentário
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
+    form.addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-      const user = auth.currentUser;
-      const inputName = nameInput.value.trim();
-      const name = inputName || (user ? user.displayName : "");
-      const message = messageInput.value.trim();
+  const user = auth.currentUser;
+  const inputName = nameInput.value.trim();
+  const message = messageInput.value.trim();
+  const name = inputName || (user ? user.displayName : "");
 
-      if (!name || !message) {
-        return alert("Preencha todos os campos.");
-      }
+  if (!name || !message) {
+    return alert("Preencha todos os campos.");
+  }
 
-      commentsRef.push({
-        name,
-        message,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-      }).then(() => {
-        messageInput.value = '';
-        if (!user) nameInput.value = '';
-      }).catch(error => {
-        alert("Erro ao enviar comentário: " + error.message);
-      });
+  // Referência ao nó de nomes únicos
+  const nameRef = db.ref("nomesUsados/" + name.replace(/\./g, "_"));
+
+  try {
+    const snapshot = await nameRef.once("value");
+
+    // Se nome já está usado por outra pessoa
+    if (snapshot.exists() && !user) {
+      return alert("Esse nome já está sendo usado por outro usuário. Escolha outro nome ou entre com sua conta.");
+    }
+
+    // Se for um nome novo, registrar
+    if (!snapshot.exists()) {
+      await nameRef.set(true); // apenas um marcador
+    }
+
+    // Enviar comentário
+    await commentsRef.push({
+      name,
+      message,
+      timestamp: firebase.database.ServerValue.TIMESTAMP
     });
 
+    messageInput.value = '';
+    if (!user) nameInput.value = '';
+
+  } catch (error) {
+    alert("Erro ao enviar comentário: " + error.message);
+  }
+});
     // Mostrar comentários
     commentsRef.on("value", (snapshot) => {
       commentsDiv.innerHTML = "";
