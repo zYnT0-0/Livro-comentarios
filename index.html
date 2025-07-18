@@ -1,24 +1,37 @@
-<!DOCTYPE html><html lang="pt-BR">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Comentários</title>
+  <title>Comentários do Livro</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <h1>Deixe seu comentário</h1><button id="login-btn">Entrar com Google</button>
-<p id="user-info"></p>
+    <h1>Deixe seu comentário</h1>
 
-<form id="comment-form">
-  <input type="text" id="name" placeholder="Seu nome (usado apenas se não estiver logado)" />
-  <textarea id="message" placeholder="Seu comentário" required></textarea>
-  <button type="submit">Enviar</button>
-</form>
+    <!-- Botão de Login -->
+    <button id="login-btn">Entrar com Google</button>
+    <p id="user-info"></p>
 
-<div id="comments"></div>
+    <!-- Formulário -->
+    <form id="comment-form">
+      <input type="text" id="name" placeholder="Seu nome (opcional se logado)" />
+      <textarea id="message" placeholder="Seu comentário" required></textarea>
+      <button type="submit">Enviar</button>
+    </form>
 
-  </div>  <!-- Firebase SDK -->  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>  <script>
+    <!-- Comentários exibidos -->
+    <div id="comments"></div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+  <script>
+    // 1. Configuração do Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCmEX1Z_OK7MbI0nrezwS57Cxo1uzcCy4",
       authDomain: "comentarios-livro.firebaseapp.com",
@@ -30,30 +43,40 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+
     const auth = firebase.auth();
-    const commentsRef = db.ref('comentarios');
+    const db = firebase.database();
+    const commentsRef = db.ref("comentarios");
 
-    const form = document.getElementById('comment-form');
-    const nameInput = document.getElementById('name');
-    const messageInput = document.getElementById('message');
-    const commentsDiv = document.getElementById('comments');
-    const loginBtn = document.getElementById('login-btn');
-    const userInfo = document.getElementById('user-info');
+    // 2. Elementos do DOM
+    const loginBtn = document.getElementById("login-btn");
+    const userInfo = document.getElementById("user-info");
+    const form = document.getElementById("comment-form");
+    const nameInput = document.getElementById("name");
+    const messageInput = document.getElementById("message");
+    const commentsDiv = document.getElementById("comments");
 
-    loginBtn.addEventListener('click', () => {
+    // 3. Login com conta Google
+    loginBtn.addEventListener("click", () => {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider)
-        .then(result => {
-          userInfo.textContent = `Logado como: ${result.user.displayName}`;
-          loginBtn.style.display = 'none';
-        })
-        .catch(error => {
-          alert('Erro ao fazer login: ' + error.message);
-        });
+      auth.signInWithPopup(provider).catch(error => {
+        alert("Erro no login: " + error.message);
+      });
     });
 
-    form.addEventListener('submit', (e) => {
+    // 4. Verifica se usuário já está logado
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        userInfo.textContent = "Logado como: " + user.displayName;
+        loginBtn.style.display = "none";
+      } else {
+        userInfo.textContent = "";
+        loginBtn.style.display = "inline-block";
+      }
+    });
+
+    // 5. Enviar comentário
+    form.addEventListener("submit", e => {
       e.preventDefault();
 
       const user = auth.currentUser;
@@ -61,39 +84,45 @@
       const message = messageInput.value.trim();
 
       if (!name || !message) {
-        return alert('Preencha todos os campos.');
+        return alert("Preencha todos os campos.");
       }
 
       commentsRef.push({
-        name,
-        message,
+        name: name,
+        message: message,
         timestamp: firebase.database.ServerValue.TIMESTAMP
       })
       .then(() => {
-        messageInput.value = '';
-        if (!user) nameInput.value = '';
+        messageInput.value = "";
+        if (!user) nameInput.value = "";
       })
       .catch(error => {
-        alert('Erro ao enviar comentário: ' + error.message);
+        alert("Erro ao enviar comentário: " + error.message);
       });
     });
 
-    commentsRef.on('value', (snapshot) => {
-      commentsDiv.innerHTML = '';
-
+    // 6. Exibir comentários
+    commentsRef.on("value", snapshot => {
+      commentsDiv.innerHTML = "";
       snapshot.forEach(child => {
         const comment = child.val();
-        const commentEl = document.createElement('p');
-
-        commentEl.innerHTML = `
+        const el = document.createElement("p");
+        el.innerHTML = `
           <div class="comment-content">
-            <strong>${comment.name}</strong>: ${comment.message}
+            <strong>${sanitize(comment.name)}</strong>: ${sanitize(comment.message)}
           </div>
           <span class="timestamp">(${new Date(comment.timestamp).toLocaleString()})</span>
         `;
-
-        commentsDiv.prepend(commentEl);
+        commentsDiv.prepend(el);
       });
     });
-  </script></body>
+
+    // 7. Sanitize para evitar XSS
+    function sanitize(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
 </html>
