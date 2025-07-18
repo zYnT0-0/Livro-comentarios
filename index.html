@@ -147,7 +147,8 @@
       e.preventDefault();
 
       const user = auth.currentUser;
-      const name = user ? user.displayName : nameInput.value.trim();
+      const inputName = nameInput.value.trim();
+      const name = inputName || (user ? user.displayName : "");
       const message = messageInput.value.trim();
 
       if (!name || !message) {
