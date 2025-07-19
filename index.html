@@ -68,13 +68,15 @@
       margin-top: 5px;
     }
 
-    .alert {
+    #alert-box {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeeba;
       padding: 10px;
-      margin-bottom: 15px;
       border-radius: 5px;
-      color: #fff;
-      background-color: #dc3545;
+      margin: 10px 0;
       text-align: center;
+      display: none;
     }
   </style>
 </head>
@@ -83,7 +85,7 @@
   <div class="container">
     <h2>Comentários</h2>
 
-    <div id="alert-container"></div>
+    <div id="alert-box"></div>
 
     <button id="login-btn">Entrar com Google</button>
     <p id="user-info"></p>
@@ -103,14 +105,13 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
   <script>
-    // Aviso para navegador externo
     if (
       navigator.userAgent.includes("FBAN") ||
       navigator.userAgent.includes("FBAV") ||
       navigator.userAgent.includes("Instagram") ||
       navigator.userAgent.includes("TikTok")
     ) {
-      alert("⚠️ Para funcionar corretamente, abra este site em um navegador real como Chrome, Firefox ou Safari.");
+      alert("⚠️ Para funcionar corretamente, abra este site em um navegador como Chrome, Firefox ou Safari.");
     }
 
     const firebaseConfig = {
@@ -134,111 +135,86 @@
     const nameInput = document.getElementById("name");
     const messageInput = document.getElementById("message");
     const commentsDiv = document.getElementById("comments");
-    const alertContainer = document.getElementById("alert-container");
+    const alertBox = document.getElementById("alert-box");
 
-    let isLoggingIn = false;
+    let userNome = "";
 
-    // Mostrar alerta customizado
-    function showAlert(msg, tempo = 4000) {
-      alertContainer.innerHTML = `<div class="alert">${msg}</div>`;
+    function showAlert(msg) {
+      alertBox.textContent = msg;
+      alertBox.style.display = "block";
       setTimeout(() => {
-        alertContainer.innerHTML = "";
-      }, tempo);
+        alertBox.style.display = "none";
+      }, 4000);
     }
 
-    // LOGIN
     loginBtn.addEventListener("click", () => {
-      if (isLoggingIn) return;
-      isLoggingIn = true;
-      loginBtn.disabled = true;
-      loginBtn.textContent = "Entrando...";
-
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithRedirect(provider)
-        .catch(error => {
-          showAlert("Erro ao iniciar login.");
-          console.error("Erro no login:", error);
-          loginBtn.disabled = false;
-          loginBtn.textContent = "Entrar com Google";
-          isLoggingIn = false;
-        });
+      auth.signInWithRedirect(provider);
     });
 
-    // Resultado do login
-    auth.getRedirectResult()
-      .then(async result => {
-        if (result.user) {
-          const uid = result.user.uid;
-          const nomeRef = db.ref("nomesPorUID/" + uid);
-          const nomeSnapshot = await nomeRef.once("value");
-          const nome = nomeSnapshot.exists() ? nomeSnapshot.val() : result.user.displayName;
+    auth.onAuthStateChanged(async user => {
+      if (user) {
+        const uid = user.uid;
+        const nomeRef = db.ref("nomesPorUID/" + uid);
+        const snapshot = await nomeRef.once("value");
 
-          userInfo.textContent = `Logado como: ${nome}`;
-          loginBtn.style.display = "none";
+        if (snapshot.exists()) {
+          userNome = snapshot.val();
           nameInput.style.display = "none";
-          showAlert("✅ Login realizado com sucesso!", 3000);
+          userInfo.textContent = `Logado como: ${userNome}`;
+          loginBtn.style.display = "none";
         } else {
-          loginBtn.disabled = false;
-          loginBtn.textContent = "Entrar com Google";
-          isLoggingIn = false;
+          nameInput.style.display = "block";
+          userInfo.textContent = `Conta detectada: ${user.email}`;
+          loginBtn.style.display = "none";
+          showAlert("Escolha um nome para usar nos comentários.");
         }
-      })
-      .catch(error => {
-        console.error("Erro ao autenticar:", error);
-        showAlert("Erro ao autenticar.");
+      } else {
         loginBtn.disabled = false;
-        loginBtn.textContent = "Entrar com Google";
-        isLoggingIn = false;
-      });
+        loginBtn.style.display = "block";
+        userInfo.textContent = "";
+        nameInput.style.display = "block";
+      }
+    });
 
-    // Enviar comentário
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const user = auth.currentUser;
       const inputName = nameInput.value.trim();
       const message = messageInput.value.trim();
+      let nomeFinal = inputName || userNome;
 
-      let name = inputName;
-
-      if (user) {
-        const uid = user.uid;
-        const nomeRef = db.ref("nomesPorUID/" + uid);
-        const nomeSnapshot = await nomeRef.once("value");
-
-        if (!nomeSnapshot.exists() && inputName) {
-          await nomeRef.set(inputName);
-        }
-
-        name = nomeSnapshot.exists() ? nomeSnapshot.val() : inputName;
-      }
-
-      if (!name || !message) {
+      if (!nomeFinal || !message) {
         return showAlert("Preencha todos os campos.");
       }
 
-      const nameRef = db.ref("nomesUsados/" + name.replace(/\./g, "_"));
-      const snapshot = await nameRef.once("value");
+      if (user && !userNome) {
+        const uid = user.uid;
+        const nomeCheck = await db.ref("nomesUsados/" + nomeFinal).once("value");
+        if (nomeCheck.exists()) {
+          return showAlert("Nome já está sendo usado por outro usuário.");
+        }
 
-      if (snapshot.exists() && !user) {
-        return showAlert("Esse nome já está sendo usado. Use outro nome ou faça login.");
+        await db.ref("nomesPorUID/" + uid).set(nomeFinal);
+        await db.ref("nomesUsados/" + nomeFinal).set(uid);
+        userNome = nomeFinal;
+        nameInput.style.display = "none";
+        userInfo.textContent = `Logado como: ${userNome}`;
       }
 
-      if (!snapshot.exists()) {
-        await nameRef.set(true);
-      }
-
-      await commentsRef.push({
-        name,
+      commentsRef.push({
+        name: nomeFinal,
         message,
         timestamp: firebase.database.ServerValue.TIMESTAMP
+      }).then(() => {
+        messageInput.value = '';
+        if (!user) nameInput.value = '';
+      }).catch(error => {
+        showAlert("Erro ao enviar comentário: " + error.message);
       });
-
-      messageInput.value = '';
-      if (!user) nameInput.value = '';
     });
 
-    // Mostrar comentários
     commentsRef.on("value", (snapshot) => {
       commentsDiv.innerHTML = "";
 
