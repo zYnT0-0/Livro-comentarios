@@ -68,15 +68,15 @@
       margin-top: 5px;
     }
 
-    /* Estilo para alerta personalizado */
-    .custom-alert {
-      background: #007bff;
-      color: white;
-      padding: 15px;
-      border-radius: 8px;
+    #custom-alert {
+      background: #ffe8e8;
+      border: 1px solid #cc0000;
+      color: #cc0000;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 15px;
       text-align: center;
-      margin-top: 15px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: none;
     }
   </style>
 </head>
@@ -85,9 +85,10 @@
   <div class="container">
     <h2>Comentários</h2>
 
+    <div id="custom-alert"></div>
+
     <button id="login-btn">Entrar com Google</button>
     <p id="user-info"></p>
-    <div id="alert-box"></div>
 
     <form id="comment-form">
       <input type="text" id="name" placeholder="Seu nome (caso não esteja logado)" />
@@ -104,16 +105,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
   <script>
-    // ⚠️ Aviso para navegadores não compatíveis (Instagram, TikTok, etc.)
-    if (
-      navigator.userAgent.includes("FBAN") ||
-      navigator.userAgent.includes("FBAV") ||
-      navigator.userAgent.includes("Instagram") ||
-      navigator.userAgent.includes("TikTok")
-    ) {
-      alert("⚠️ Para funcionar corretamente, abra este site em um navegador real como Chrome, Firefox ou Safari.");
-    }
-
     const firebaseConfig = {
       apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",
       authDomain: "comentarios-livro.firebaseapp.com",
@@ -128,73 +119,126 @@
     const db = firebase.database();
     const auth = firebase.auth();
     const commentsRef = db.ref("comentarios");
+    const nomesUsadosRef = db.ref("nomesUsados");
 
     const loginBtn = document.getElementById("login-btn");
     const userInfo = document.getElementById("user-info");
-    const alertBox = document.getElementById("alert-box");
     const form = document.getElementById("comment-form");
     const nameInput = document.getElementById("name");
     const messageInput = document.getElementById("message");
     const commentsDiv = document.getElementById("comments");
+    const alertBox = document.getElementById("custom-alert");
 
-    // 🔁 Forçar logout automático ao iniciar
-    auth.signOut().then(() => {
-      console.log("Sessão encerrada automaticamente no carregamento.");
-    });
-
-    // Função de alerta estilizado
-    function showCustomAlert(msg) {
-      alertBox.innerHTML = `<div class="custom-alert">${msg}</div>`;
-      setTimeout(() => alertBox.innerHTML = "", 4000);
+    function exibirAlerta(msg) {
+      alertBox.textContent = msg;
+      alertBox.style.display = "block";
+      setTimeout(() => {
+        alertBox.style.display = "none";
+      }, 5000);
     }
 
-    // Login com redirect
+    function formatarData(timestamp) {
+      const date = new Date(timestamp);
+      const dia = String(date.getDate()).padStart(2, '0');
+      const mes = String(date.getMonth() + 1).padStart(2, '0');
+      const ano = date.getFullYear();
+      const hora = String(date.getHours()).padStart(2, '0');
+      const minutos = String(date.getMinutes()).padStart(2, '0');
+      return `${dia}/${mes}/${ano} - ${hora}:${minutos}`;
+    }
+
+    function esconderInputNomeSeLogado(nomeSalvo) {
+      if (nomeSalvo) {
+        nameInput.style.display = "none";
+        userInfo.textContent = `Logado como: ${nomeSalvo}`;
+        loginBtn.style.display = "none";
+      }
+    }
+
+    function isPopupSupported() {
+      try {
+        const popup = window.open('', '', 'width=100,height=100');
+        if (!popup || popup.closed || typeof popup.closed === 'undefined') return false;
+        popup.close();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function detectarNavegadorRuim() {
+      const ua = navigator.userAgent;
+      return ua.includes("FBAN") || ua.includes("FBAV") || ua.includes("Instagram") || ua.includes("TikTok") || ua.includes("CriOS");
+    }
+
+    if (detectarNavegadorRuim()) {
+      exibirAlerta("⚠️ Este navegador pode bloquear o login com Google. Use Chrome, Firefox ou Safari.");
+    }
+
     loginBtn.addEventListener("click", () => {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithRedirect(provider);
+      if (isPopupSupported()) {
+        auth.signInWithPopup(provider).catch(err => {
+          exibirAlerta("Erro ao autenticar: " + err.message);
+        });
+      } else {
+        auth.signInWithRedirect(provider);
+      }
     });
 
-    // Verificar login após redirecionamento
-    auth.getRedirectResult()
-      .then(result => {
-        if (result.user) {
-          userInfo.textContent = `Logado como: ${result.user.displayName}`;
-          loginBtn.style.display = "none";
-          showCustomAlert("✅ Login realizado com sucesso!");
-        }
-      })
-      .catch(error => {
-        console.error("Erro ao autenticar:", error);
-      });
+    auth.onAuthStateChanged(async user => {
+      if (user) {
+        const uid = user.uid;
+        const nomeRef = db.ref("usuarios/" + uid + "/nomeEscolhido");
 
-    // Enviar comentário
+        const snapshot = await nomeRef.once("value");
+        let nome = snapshot.val();
+
+        if (!nome) {
+          nome = prompt("Escolha um nome único para seus comentários:");
+          if (!nome) return exibirAlerta("Nome obrigatório para continuar.");
+
+          const nomeJaUsado = await nomesUsadosRef.child(nome).once("value");
+          if (nomeJaUsado.exists()) {
+            return exibirAlerta("Esse nome já está em uso. Recarregue e tente outro.");
+          }
+
+          await nomeRef.set(nome);
+          await nomesUsadosRef.child(nome).set(uid);
+        }
+
+        esconderInputNomeSeLogado(nome);
+      } else {
+        nameInput.style.display = "block";
+        loginBtn.style.display = "block";
+        userInfo.textContent = "";
+      }
+    });
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const user = auth.currentUser;
-      const inputName = nameInput.value.trim();
-      const message = messageInput.value.trim();
-      const name = inputName || (user ? user.displayName : "");
+      let nome;
 
-      if (!name || !message) {
-        return showCustomAlert("⚠️ Preencha todos os campos.");
+      if (user) {
+        const nomeSnap = await db.ref("usuarios/" + user.uid + "/nomeEscolhido").once("value");
+        nome = nomeSnap.val();
+        if (!nome) return exibirAlerta("Erro: nome de usuário não definido.");
+      } else {
+        nome = nameInput.value.trim();
+        if (!nome) return exibirAlerta("Digite seu nome.");
+        const jaExiste = await nomesUsadosRef.child(nome).once("value");
+        if (jaExiste.exists()) return exibirAlerta("Nome já usado. Escolha outro.");
+        await nomesUsadosRef.child(nome).set("semLogin");
       }
 
-      // Evitar nomes duplicados
-      const nameRef = db.ref("nomesUsados/" + name.replace(/\./g, "_"));
-      const snapshot = await nameRef.once("value");
-
-      if (snapshot.exists() && !user) {
-        return showCustomAlert("⚠️ Esse nome já está sendo usado. Use outro ou entre com sua conta.");
-      }
-
-      if (!snapshot.exists()) {
-        await nameRef.set(true);
-      }
+      const msg = messageInput.value.trim();
+      if (!msg) return exibirAlerta("Escreva uma mensagem.");
 
       await commentsRef.push({
-        name,
-        message,
+        name: nome,
+        message: msg,
         timestamp: firebase.database.ServerValue.TIMESTAMP
       });
 
@@ -202,28 +246,13 @@
       if (!user) nameInput.value = '';
     });
 
-    // Mostrar comentários
     commentsRef.on("value", (snapshot) => {
       commentsDiv.innerHTML = "";
-
       snapshot.forEach(child => {
         const comment = child.val();
         const el = document.createElement("div");
         el.className = "comment";
-
-        // Data formatada (sem segundos)
-        const date = new Date(comment.timestamp);
-        const dia = String(date.getDate()).padStart(2, '0');
-        const mes = String(date.getMonth() + 1).padStart(2, '0');
-        const ano = date.getFullYear();
-        const hora = String(date.getHours()).padStart(2, '0');
-        const minutos = String(date.getMinutes()).padStart(2, '0');
-        const dataFormatada = `${dia}/${mes}/${ano} - ${hora}:${minutos}`;
-
-        el.innerHTML = `
-          <strong>${comment.name}</strong>: ${comment.message}
-          <span class="timestamp">${dataFormatada}</span>
-        `;
+        el.innerHTML = `<strong>${comment.name}</strong>: ${comment.message}<span class="timestamp">${formatarData(comment.timestamp)}</span>`;
         commentsDiv.prepend(el);
       });
     });
