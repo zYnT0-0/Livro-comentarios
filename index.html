@@ -599,4 +599,8 @@
   });
 
   onlineRef.on("value", snap => {
-    userCount.textContent = `👥 
+    userCount.textContent = `👥 Usuários online: ${snap.numChildren()}`;
+  });
+</script>
+</body>
+</html>
