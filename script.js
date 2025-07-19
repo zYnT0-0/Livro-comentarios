@@ -118,8 +118,8 @@ logoutBtn.addEventListener("click", () => {
 
 deleteBtn.addEventListener("click", async () => {
   const user = auth.currentUser;
-  if (!user || user.uid === ADMIN_UID) return showAlert("Admin não pode apagar conta", true);
-  const conf = await showCustomPrompt("Digite 'sim' para confirmar exclusão", "text");
+  if (!user || user.uid === ADMIN_UID) return showAlert("Admin n\u00e3o pode apagar conta", true);
+  const conf = await showCustomPrompt("Digite 'sim' para confirmar exclus\u00e3o", "text");
   if (conf !== "sim") return;
   const provider = new firebase.auth.GoogleAuthProvider();
   await user.reauthenticateWithPopup(provider);
@@ -134,7 +134,7 @@ auth.onAuthStateChanged(async user => {
   if (user) {
     const banned = await bannedRef.child(user.uid).once("value");
     if (banned.exists()) {
-      await showCustomAlert("Você foi banido.");
+      await showCustomAlert("Voc\u00ea foi banido.");
       return auth.signOut();
     }
 
@@ -143,7 +143,7 @@ auth.onAuthStateChanged(async user => {
 
     if (!nome) {
       while (true) {
-        const tentativa = await showCustomPrompt("Escolha um nome único:", "text");
+        const tentativa = await showCustomPrompt("Escolha um nome \u00fanico:", "text");
         if (!tentativa) return auth.signOut();
         const exists = await namesRef.orderByValue().equalTo(tentativa).once("value");
         if (!exists.exists()) {
@@ -151,12 +151,12 @@ auth.onAuthStateChanged(async user => {
           nome = tentativa;
           break;
         }
-        await showCustomAlert("Nome já em uso. Tente outro.");
+        await showCustomAlert("Nome j\u00e1 em uso. Tente outro.");
       }
     }
 
     nameInput.style.display = "none";
-    userInfo.innerHTML = `👤 Logado como: <strong>${nome}</strong>`;
+    userInfo.innerHTML = `\ud83d\udc64 Logado como: <strong>${nome}</strong>`;
     loginBtn.style.display = "none";
     logoutBtn.style.display = "inline-block";
     deleteBtn.style.display = "inline-block";
@@ -167,20 +167,20 @@ auth.onAuthStateChanged(async user => {
     loginBtn.style.display = "inline-block";
     logoutBtn.style.display = "none";
     deleteBtn.style.display = "none";
-    userInfo.innerHTML = "Faça login para comentar.";
+    userInfo.innerHTML = "Fa\u00e7a login para comentar.";
   }
 });
 
 form.addEventListener("submit", async e => {
   e.preventDefault();
   const user = auth.currentUser;
-  if (!user) return showAlert("Faça login para comentar.", true);
+  if (!user) return showAlert("Fa\u00e7a login para comentar.", true);
 
   const msg = messageInput.value.trim();
   if (!msg) return;
 
   const nameSnap = await namesRef.child(user.uid).once("value");
-  const nome = nameSnap.val() || "Anônimo";
+  const nome = nameSnap.val() || "An\u00f4nimo";
 
   const comment = {
     uid: user.uid,
@@ -258,11 +258,11 @@ commentsRef.on("value", async snapshot => {
 
     if (isAdmin && c.uid !== ADMIN_UID) {
       const del = document.createElement("button");
-      del.textContent = "🗑️ Apagar";
+      del.textContent = "\ud83d\uddd1\ufe0f Apagar";
       del.onclick = () => commentsRef.child(c.key).remove();
 
       const ban = document.createElement("button");
-      ban.textContent = "🚫 Banir";
+      ban.textContent = "\ud83d\udeab Banir";
       ban.onclick = async () => {
         await bannedRef.child(c.uid).set(true);
         commentsRef.orderByChild("uid").equalTo(c.uid).once("value", snap => snap.forEach(ch => ch.ref.remove()));
@@ -281,5 +281,6 @@ commentsRef.on("value", async snapshot => {
 });
 
 onlineRef.on("value", snap => {
-  userCount.textContent = `👥 Usuários online: ${snap.numChildren()}`;
+  userCount.textContent = `\ud83d\udc65 Usu\u00e1rios online: ${snap.numChildren()}`;
 });
+ 
