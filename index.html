@@ -1,1 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Livro + Comentários</title>
+  <style>
+    :root {
+      --bg: #1e1e1e;
+      --fg: #ffffff;
+      --accent: #5865f2;
+      --border: #36393f;
+      --comment-bg: #36393f;
+      --comment-own-bg: #4f545c;
+      --admin-bg: #5865f2;
+      --input-bg: #40444b;
+      --button-hover: #4752c4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      padding: 20px;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 700px;
+      width: 100%;
+      margin: auto;
+      background: #2f3136;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    h2 {
+      text-align: center;
+      color: var(--fg);
+      margin-bottom: 20px;
+    }
+    #user-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    #comment-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    #comment-form input,
+    #comment-form textarea {
+      padding: 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: 5px;
+      resize: vertical;
+    }
+    button {
+      padding: 10px 15px;
+      background: var(--accent);
+      border: none;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s ease;
+    }
+    button:hover {
+      background-color: var(--button-hover);
+    }
+    #comments {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 15px;
+    }
+    .comment {
+      background: var(--comment-bg);
+      padding: 12px 15px;
+      border-radius: 8px;
+      word-wrap: break-word;
+    }
+    .comment.own {
+      background: var(--comment-own-bg);
+    }
+    .comment.admin {
+      background: var(--admin-bg);
+    }
+    .comment-header {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+    .comment-author {
+      font-weight: bold;
+      color: var(--accent);
+    }
+    .comment.admin .comment-author {
+      color: #c4c4ff;
+      text-shadow: 0 0 5px rgba(196, 196, 255, 0.5);
+    }
+    .comment-timestamp {
+      font-size: 0.8em;
+      color: #b9bbbe;
+    }
+    .comment.admin .comment-timestamp {
+      color: #e0e0ff;
+    }
+    .comment-message {
+      margin-top: 5px;
+      white-space: pre-wrap;
+    }
+    .comment-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+    }
+    .comment-actions button {
+      padding: 6px 10px;
+      font-size: 0.85em;
+    }
+    .admin-buttons {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+    .admin-buttons button {
+      background-color: #f04747;
+    }
+    .admin-buttons button:hover {
+      background-color: #cc3a3a;
+    }
 
+    #alert-box {
+      display: none;
+      background: #43b581;
+      color: #fff;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+
+    .error-alert {
+      background: #f04747 !important;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div id="alert-box"></div>
+  <h2>Comentários</h2>
+  <div id="user-info-section">
+    <p id="user-info"></p>
+    <p id="user-count"></p>
+  </div>
+  <div id="user-controls">
+    <button id="login-btn">Registrar</button>
+    <button id="logout-btn" style="display:none;">Sair</button>
+    <button id="delete-account" style="display:none;">Apagar minha conta</button>
+  </div>
+
+  <form id="comment-form">
+    <input type="text" id="name" placeholder="Seu nome (só se não estiver logado)" style="display:none;" />
+    <textarea id="message" placeholder="Seu comentário" required rows="3"></textarea>
+    <button type="submit">Enviar</button>
+  </form>
+  <div id="comments"></div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<!-- Script externo contendo todas as funcionalidades -->
+<script src="script.js"></script>
+</body>
+</html>
