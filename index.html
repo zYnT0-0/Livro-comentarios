@@ -686,6 +686,14 @@
   onlineRef.on("value", snap => {
     userCount.textContent = `👥 Usuários online: ${snap.numChildren()}`;
   });
+
+  function cancelReply() {
+  const replyInfo = document.getElementById("reply-info");
+  replyInfo.style.display = "none";
+  replyInfo.dataset.replyTo = "";
+  replyInfo.dataset.replyMessage = "";
+  }
+  
 </script>
 </body>
 </html>
