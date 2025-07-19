@@ -525,7 +525,7 @@
             apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",
             authDomain: "comentarios-livro.firebaseapp.com",
             projectId: "comentarios-livro",
-            storageBucket: "comentarios-livro.appspot.com",
+ o.appspot.com",
             messagingSenderId: "702096545512",
             appId: "1:702096545512:web:f7f3f00e0573d246c41b6d",
             measurementId: "G-7Q413000P5", // Este não estava explicitamente na imagem, mas geralmente é parte da config. Se você tiver um diferente, por favor ajuste.
@@ -944,6 +944,111 @@
 
         // Monitorar estado de autenticação
         auth.onAuthStateChanged(async (user) => {
+    const isAdmin = user && user.uid === ADMIN_UID;
+
+    commentsDiv.innerHTML = ""; // limpa ao logar
+    commentsRef.on("child_added", async (snapshot) => {
+        const c = { key: snapshot.key, ...snapshot.val() };
+
+        const div = document.createElement("div");
+        div.className = "comment";
+        if (user && user.uid === c.uid) div.classList.add("own");
+        if (c.uid === ADMIN_UID) div.classList.add("admin");
+
+        const date = new Date(c.timestamp);
+        const dataFormatada = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+        let messageContent = parseMarkdown(c.message);
+
+        const nameSnapList = await namesRef.once("value");
+        const allNames = [];
+        nameSnapList.forEach(child => allNames.push(child.val()));
+        allNames.sort((a, b) => b.length - a.length).forEach(name => {
+            const regex = new RegExp(`@${name}\b`, 'g');
+            messageContent = messageContent.replace(regex, `<span class="mention">@${name}</span>`);
+        });
+
+        let replyToHtml = '';
+        if (c.replyToId && c.replyToAuthor) {
+            const originalCommentSnap = await commentsRef.child(c.replyToId).once("value");
+            if (originalCommentSnap.exists()) {
+                const original = originalCommentSnap.val();
+                const snippet = original.message.substring(0, 80) + (original.message.length > 80 ? "..." : "");
+                replyToHtml = `<div class="comment-reply-block"><span class="reply-block-author">${original.name}</span><span class="reply-block-message">${snippet}</span></div>`;
+            } else {
+                replyToHtml = `<div class="comment-reply-block comment-reply-deleted"><span class="reply-block-message">[Mensagem original apagada]</span></div>`;
+            }
+        }
+
+        div.innerHTML = `
+            <div class="comment-header">
+                <span class="comment-author">${c.name}</span>
+                <span class="comment-timestamp">(${dataFormatada})</span>
+            </div>
+            ${replyToHtml}
+            <div class="comment-message">${messageContent}</div>
+        `;
+
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "comment-actions";
+
+        const replyBtn = document.createElement("button");
+        replyBtn.textContent = "Responder";
+        replyBtn.onclick = () => startReply(c.key, c.name);
+        actionsDiv.appendChild(replyBtn);
+
+        if (user && user.uid === c.uid) {
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "Editar";
+            editBtn.onclick = async () => {
+                const novoTexto = await showCustomPrompt("Edite sua mensagem:", "textarea", c.message);
+                if (novoTexto !== null && novoTexto.trim() !== "") {
+                    await commentsRef.child(c.key).update({ message: novoTexto });
+                }
+            };
+
+            const delBtn = document.createElement("button");
+            delBtn.textContent = "Apagar Mensagem";
+            delBtn.onclick = async () => {
+                const confirm = await showCustomPrompt("Apagar esta mensagem?", "text", "sim");
+                if (confirm === "sim") await commentsRef.child(c.key).remove();
+            };
+
+            actionsDiv.append(editBtn, delBtn);
+        }
+
+        if (isAdmin && c.uid !== ADMIN_UID) {
+            const adminBox = document.createElement("div");
+            adminBox.className = "admin-buttons";
+
+            const del = document.createElement("button");
+            del.textContent = "🗑️ Apagar";
+            del.onclick = async () => {
+                const confirmDel = await showCustomPrompt("Apagar esta mensagem?", "text", "sim");
+                if (confirmDel === "sim") await commentsRef.child(c.key).remove();
+            };
+
+            const ban = document.createElement("button");
+            ban.textContent = "🚫 Banir";
+            ban.onclick = async () => {
+                const confirmBan = await showCustomPrompt(`Banir ${c.name}?`, "text", "sim");
+                if (confirmBan === "sim") {
+                    await bannedRef.child(c.uid).set(true);
+                    await commentsRef.orderByChild("uid").equalTo(c.uid).once("value", snap => {
+                        snap.forEach(child => child.ref.remove());
+                    });
+                    onlineRef.child(c.uid).remove();
+                }
+            };
+
+            adminBox.append(del, ban);
+            actionsDiv.append(adminBox);
+        }
+
+        div.append(actionsDiv);
+        commentsDiv.appendChild(div);
+    });
+
             if (user) {
                 statusDiv.textContent = `✅ Logado como: ${user.email}`;
                 authSection.style.display = "none";
@@ -987,15 +1092,7 @@
         });
 
         // Carregar e exibir comentários
-        commentsRef.on("value", async snapshot => {
-            commentsDiv.innerHTML = ""; // Limpa os comentários existentes para evitar duplicação!
-            const user = auth.currentUser;
-            const isAdmin = user && user.uid === ADMIN_UID;
-
-            const commentsArray = [];
-            snapshot.forEach(child => {
-                commentsArray.push({ key: child.key, ...child.val() });
-            });
+                    });
 
             commentsArray.sort((a, b) => a.timestamp - b.timestamp);
 
