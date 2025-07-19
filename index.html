@@ -520,20 +520,21 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script> <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script> <script>
-        // Suas configurações do Firebase
+                // Suas configurações do Firebase
         const firebaseConfig = {
-            apiKey: "SEU_API_KEY",
-            authDomain: "SEU_AUTH_DOMAIN",
-            projectId: "SEU_PROJECT_ID",
-            storageBucket: "SEU_STORAGE_BUCKET",
-            messagingSenderId: "SEU_MESSAGING_SENDER_ID",
-            appId: "SEU_APP_ID",
-            measurementId: "SEU_MEASUREMENT_ID",
-            databaseURL: "SEU_DATABASE_URL" // Verifique se esta URL está correta
+            apiKey: "AIzaSyDmQn-EDX12_GKjMcbDreeze557CxclutoCoy4",
+            authDomain: "comentarios-livro.firebaseapp.com",
+            projectId: "comentarios-livro",
+            storageBucket: "comentarios-livro.appspot.com",
+            messagingSenderId: "702096545512",
+            appId: "1:702096545512:web:f7f3f00e0573d246c41b6d",
+            measurementId: "G-7Q413000P5", // Este não estava explicitamente na imagem, mas geralmente é parte da config. Se você tiver um diferente, por favor ajuste.
+            databaseURL: "https://comentarios-livro-default-rtdb.firebaseio.com" // Baseado no projectId, esta é a URL padrão do Realtime Database
         };
 
         // Substitua 'SEU_UID_DE_ADMIN_AQUI' pelo UID do seu usuário administrador
         const ADMIN_UID = "RTJkscPxu9MjMFL4RZSaILntfM13";
+        
 
         // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
