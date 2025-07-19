@@ -5,91 +5,246 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Livro + Comentários</title>
   <style>
+    :root {
+      --bg: #1e1e1e; /* Darker background for chat feel */
+      --fg: #ffffff;
+      --accent: #5865f2; /* Azul mais forte */
+      --border: #36393f; /* Darker border for chat feel */
+      --comment-bg: #36393f; /* Discord dark grey for comments */
+      --comment-own-bg: #4f545c; /* Slightly lighter grey for own comments */
+      --admin-bg: #5865f2; /* Admin comments também com o azul mais forte */
+      --input-bg: #40444b;
+      --button-hover: #4752c4; /* Ajuste para o hover do botão */
+    }
+    * { box-sizing: border-box; }
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
+      font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Discord font stack */
+      background: var(--bg);
+      color: var(--fg);
       padding: 20px;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
     }
     .container {
-      max-width: 600px;
+      max-width: 700px; /* Slightly wider for chat layout */
+      width: 100%;
       margin: auto;
-      background: #fff;
+      background: #2f3136; /* Discord main background */
       padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-radius: 8px; /* Slightly less rounded */
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
     }
     h2 {
       text-align: center;
+      color: var(--fg);
+      margin-bottom: 20px;
     }
-    #comment-form, #alert-box {
+    #user-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    }
+    #comment-form {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      margin-top: 20px;
+      margin-top: 10px; /* Less margin */
     }
     #comment-form input,
     #comment-form textarea {
-      padding: 10px;
-      border: 1px solid #ccc;
+      padding: 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      color: var(--fg);
       border-radius: 5px;
+      resize: vertical; /* Allow vertical resize for textarea */
     }
-    #comment-form button,
-    #login-btn,
-    #logout-btn,
-    #delete-account {
-      padding: 10px;
-      background: #007bff;
+    button {
+      padding: 10px 15px; /* More balanced padding */
+      background: var(--accent);
       border: none;
       color: white;
       border-radius: 5px;
       cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s ease;
+    }
+    button:hover {
+      background-color: var(--button-hover);
+    }
+    #comments {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column-reverse; /* Newest comments at the bottom (like chat) */
+      gap: 15px; /* Spacing between chat messages */
     }
     .comment {
-      background: #f9f9f9;
-      border: 1px solid #ddd;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 6px;
+      background: var(--comment-bg);
+      border: none; /* No border for chat look */
+      padding: 12px 15px;
+      border-radius: 8px; /* Rounded message bubbles */
+      word-wrap: break-word; /* Ensure long words wrap */
     }
-    .timestamp {
+    .comment.own {
+      background: var(--comment-own-bg);
+    }
+    .comment.admin {
+      background: var(--admin-bg); /* Admin comments distinct */
+    }
+    .comment-header {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+    .comment-author {
+      font-weight: bold;
+      color: var(--accent); /* Author name in accent color */
+    }
+    .comment.admin .comment-author {
+      color: #c4c4ff; /* Um azul mais claro e vibrante para o nome do Admin */
+      text-shadow: 0 0 5px rgba(196, 196, 255, 0.5); /* Um brilho sutil */
+    }
+    .comment-timestamp {
       font-size: 0.8em;
-      color: #666;
-      display: block;
-      margin-top: 5px;
+      color: #b9bbbe; /* Um cinza mais claro para a data e hora */
     }
+    .comment.admin .comment-timestamp {
+      color: #e0e0ff; /* Azul bem claro para a data e hora dos comentários do Admin */
+    }
+    .comment-message {
+      margin-top: 5px;
+      white-space: pre-wrap; /* Preserve whitespace and line breaks */
+    }
+    .comment-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px; /* Spacing between action buttons */
+    }
+    .comment-actions button {
+      padding: 6px 10px; /* Smaller padding for action buttons */
+      font-size: 0.85em;
+    }
+    .admin-buttons {
+      margin-left: auto; /* Push admin buttons to the right */
+      display: flex;
+      gap: 8px;
+    }
+    .admin-buttons button {
+      background-color: #f04747; /* Red for delete/ban */
+    }
+    .admin-buttons button:hover {
+      background-color: #cc3a3a;
+    }
+
+    /* Custom Modal/Alert Styling */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      display: none; /* Hidden by default */
+    }
+    .modal-content {
+      background: #36393f;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+      max-width: 450px;
+      width: 90%;
+      text-align: center;
+      color: var(--fg);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .modal-content input, .modal-content textarea {
+      padding: 10px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: 5px;
+      width: 100%;
+    }
+    .modal-content .modal-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+    .modal-content .modal-buttons button {
+      flex: 1;
+      padding: 10px;
+    }
+    .modal-content .modal-buttons .cancel-btn {
+      background-color: #72767d;
+    }
+    .modal-content .modal-buttons .cancel-btn:hover {
+      background-color: #5d6067;
+    }
+
     #alert-box {
       display: none;
-      background: #dff0d8;
-      color: #3c763d;
-      border: 1px solid #d6e9c6;
+      background: #43b581; /* Discord green for success */
+      color: #fff;
+      border: none;
       padding: 10px;
       border-radius: 5px;
       text-align: center;
+      font-weight: bold;
+      margin-bottom: 15px; /* Spacing below alert */
     }
+    .error-alert {
+      background: #f04747 !important; /* Discord red for errors */
+    }
+
   </style>
 </head>
 <body>
 <div class="container">
-  <h2>Comentários</h2>
   <div id="alert-box"></div>
-
-  <button id="login-btn">Registrar</button>
-  <button id="logout-btn" style="display:none;">Sair</button>
-
-  <p id="user-info"></p>
-  <p id="user-count"></p>
+  <h2>Comentários</h2>
+  <div id="user-info-section">
+    <p id="user-info"></p>
+    <p id="user-count"></p>
+  </div>
+  <div id="user-controls">
+    <button id="login-btn">Registrar</button>
+    <button id="logout-btn" style="display:none;">Sair</button>
+    <button id="delete-account" style="display:none;">Apagar minha conta</button>
+  </div>
 
   <form id="comment-form">
-    <div id="reply-info" style="display:none; font-size: 0.9em; background: #e3e3e3; padding: 5px; border-left: 3px solid #007bff;">
-      Respondendo a: <span id="reply-to-name"></span><br>
-      <span id="reply-to-message" style="font-style: italic;"></span>
-      <button type="button" onclick="cancelReply()" style="float: right;">\u2716\ufe0f</button>
-    </div>
-    <input type="text" id="name" placeholder="Seu nome (só se não estiver logado)" />
-    <textarea id="message" placeholder="Seu comentário" required></textarea>
+    <input type="text" id="name" placeholder="Seu nome (só se não estiver logado)" style="display:none;" />
+    <textarea id="message" placeholder="Seu comentário" required rows="3"></textarea>
     <button type="submit">Enviar</button>
   </form>
   <div id="comments"></div>
+</div>
+
+
+<div id="custom-modal" class="modal-overlay">
+  <div class="modal-content">
+    <p id="modal-message"></p>
+    <input type="text" id="modal-input" style="display:none;" />
+    <textarea id="modal-textarea" style="display:none;"></textarea>
+    <div class="modal-buttons">
+      <button id="modal-confirm-btn">Confirmar</button>
+      <button id="modal-cancel-btn" class="cancel-btn" style="display:none;">Cancelar</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -105,105 +260,390 @@
     messagingSenderId: "702096545512",
     appId: "1:702096545512:web:f7f305fe579d246c41b5d"
   };
-  firebase.initializeApp(firebaseConfig);
 
+  firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   const auth = firebase.auth();
   const commentsRef = db.ref("comentarios");
+  const namesRef = db.ref("nomesUsados");
+  const onlineRef = db.ref("logados");
+  const bannedRef = db.ref("banidos");
+
+  const ADMIN_UID = "RTJkscPxu9MjMFL4RZSaILntfM13"; // SUBSTITUA PELO SEU UID DE ADMIN REAL
 
   const loginBtn = document.getElementById("login-btn");
   const logoutBtn = document.getElementById("logout-btn");
+  const deleteBtn = document.getElementById("delete-account");
   const userInfo = document.getElementById("user-info");
+  const userCount = document.getElementById("user-count");
   const form = document.getElementById("comment-form");
   const nameInput = document.getElementById("name");
   const messageInput = document.getElementById("message");
   const commentsDiv = document.getElementById("comments");
-  const replyBox = document.getElementById("reply-info");
-  const replyToName = document.getElementById("reply-to-name");
-  const replyToMessage = document.getElementById("reply-to-message");
+  const alertBox = document.getElementById("alert-box");
 
-  function responderMensagem(nome, texto, id) {
-    window.currentReply = { nome, texto, id };
-    replyToName.textContent = nome;
-    replyToMessage.textContent = texto;
-    replyBox.style.display = "block";
+  // Custom Modal Elements
+  const customModal = document.getElementById("custom-modal");
+  const modalMessage = document.getElementById("modal-message");
+  const modalInput = document.getElementById("modal-input");
+  const modalTextarea = document.getElementById("modal-textarea");
+  const modalConfirmBtn = document.getElementById("modal-confirm-btn");
+  const modalCancelBtn = document.getElementById("modal-cancel-btn");
+
+  function showAlert(msg, isError = false) {
+    alertBox.textContent = msg;
+    alertBox.style.display = "block";
+    if (isError) {
+      alertBox.classList.add("error-alert");
+    } else {
+      alertBox.classList.remove("error-alert");
+    }
+    setTimeout(() => alertBox.style.display = "none", 4000);
   }
 
-  function cancelReply() {
-    window.currentReply = null;
-    replyBox.style.display = "none";
+  function showCustomPrompt(message, type = 'text', defaultValue = '') {
+    return new Promise(resolve => {
+      modalMessage.textContent = message;
+      modalInput.style.display = 'none';
+      modalTextarea.style.display = 'none';
+      modalConfirmBtn.style.display = 'inline-block';
+      modalCancelBtn.style.display = 'inline-block';
+
+      if (type === 'text') {
+        modalInput.value = defaultValue;
+        modalInput.style.display = 'block';
+        modalInput.focus();
+      } else if (type === 'textarea') {
+        modalTextarea.value = defaultValue;
+        modalTextarea.style.display = 'block';
+        modalTextarea.focus();
+      }
+
+      customModal.style.display = 'flex';
+
+      const confirmHandler = () => {
+        const value = type === 'text' ? modalInput.value : modalTextarea.value;
+        customModal.style.display = 'none';
+        modalConfirmBtn.removeEventListener('click', confirmHandler);
+        modalCancelBtn.removeEventListener('click', cancelHandler);
+        resolve(value);
+      };
+
+      const cancelHandler = () => {
+        customModal.style.display = 'none';
+        modalConfirmBtn.removeEventListener('click', confirmHandler);
+        modalCancelBtn.removeEventListener('click', cancelHandler);
+        resolve(null);
+      };
+
+      modalConfirmBtn.addEventListener('click', confirmHandler);
+      modalCancelBtn.addEventListener('click', cancelHandler);
+    });
   }
 
-  loginBtn.onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-  logoutBtn.onclick = () => auth.signOut();
+  function showCustomAlert(message) {
+    return new Promise(resolve => {
+      modalMessage.textContent = message;
+      modalInput.style.display = 'none';
+      modalTextarea.style.display = 'none';
+      modalCancelBtn.style.display = 'none'; // No cancel for alert
+      modalConfirmBtn.textContent = 'Ok'; // Change button text for alert
+      customModal.style.display = 'flex';
 
-  auth.onAuthStateChanged(user => {
+      const confirmHandler = () => {
+        customModal.style.display = 'none';
+        modalConfirmBtn.removeEventListener('click', confirmHandler);
+        modalConfirmBtn.textContent = 'Confirmar'; // Reset button text
+        resolve();
+      };
+      modalConfirmBtn.addEventListener('click', confirmHandler);
+    });
+  }
+
+
+  // Troca botão de registro/login
+  loginBtn.textContent = "Registrar";
+  loginBtn.addEventListener("click", () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    // CORREÇÃO AQUI: Usar setCustomParameters para forçar a seleção de conta
+    provider.setCustomParameters({ prompt: 'select_account' });
+    auth.signInWithPopup(provider).catch(error => {
+      showAlert(`Erro ao fazer login: ${error.message}`, true);
+    });
+  });
+
+  logoutBtn.addEventListener("click", () => {
+    const user = auth.currentUser;
+    if (user) {
+      onlineRef.child(user.uid).remove(); // Remove o status online
+      auth.signOut().then(() => {
+        // Redireciona ou recarrega a página para limpar o estado
+        location.reload();
+      }).catch(error => {
+        showAlert(`Erro ao sair: ${error.message}`, true);
+      });
+    }
+  });
+
+  deleteBtn.addEventListener("click", async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      showAlert("Nenhum usuário logado para apagar.", true);
+      return;
+    }
+    // Impedir que o ADMIN_UID apague a própria conta pelo botão
+    if (user.uid === ADMIN_UID) {
+      showAlert("Não é possível apagar a conta de administrador através desta opção.", true);
+      return;
+    }
+
+    const confirmDelete = await showCustomPrompt("Tem certeza que deseja apagar sua conta? Esta ação é irreversível.", "text", "sim");
+    if (confirmDelete !== "sim") {
+      showAlert("Operação cancelada.", true);
+      return;
+    }
+
+    try {
+        // --- ETAPA DE REAUTENTICAÇÃO ---
+        // Essencial para operações sensíveis como user.delete()
+        const provider = new firebase.auth.GoogleAuthProvider();
+        // Também usar setCustomParameters aqui para a reautenticação
+        provider.setCustomParameters({ prompt: 'select_account' });
+        await user.reauthenticateWithPopup(provider); // Isso abrirá um pop-up para o usuário logar novamente
+
+        // --- EXCLUIR DADOS DO USUÁRIO NO DATABASE ---
+        // Acessa e remove todos os comentários do usuário
+        await commentsRef.orderByChild("uid").equalTo(user.uid).once("value", snapshot => {
+            snapshot.forEach(child => child.ref.remove());
+        });
+
+        // Remove o nome de usuário registrado
+        await namesRef.child(user.uid).remove();
+
+        // Remove o status online
+        await onlineRef.child(user.uid).remove();
+
+        // --- APAGAR A CONTA DO FIREBASE AUTHENTICATION ---
+        await user.delete();
+
+        showAlert("Conta apagada com sucesso. Você foi desconectado.");
+        // Redirecionar ou recarregar a página para garantir que não haja rastros da sessão
+        location.reload();
+
+    } catch (error) {
+        console.error("Erro ao apagar conta:", error);
+        if (error.code === 'auth/requires-recent-login') {
+            await showCustomAlert("Por favor, faça login novamente para apagar sua conta. (Requerido para operações de segurança)");
+        } else if (error.code === 'auth/popup-closed-by-user') {
+            showAlert("Reautenticação cancelada pelo usuário. Conta não apagada.", true);
+        } else if (error.code === 'auth/cancelled-popup-request') {
+             showAlert("Reautenticação cancelada: janela de pop-up já aberta ou bloqueada. Tente novamente.", true);
+        }
+        else {
+            showAlert(`Erro ao apagar conta: ${error.message}`, true);
+        }
+    }
+  });
+
+  auth.onAuthStateChanged(async user => {
     if (user) {
       loginBtn.style.display = "none";
       logoutBtn.style.display = "inline-block";
-      userInfo.textContent = `Logado como: ${user.displayName}`;
+      deleteBtn.style.display = "inline-block";
+      nameInput.style.display = "none"; // Hide name input if logged in
+
+      const ban = await bannedRef.child(user.uid).once("value");
+      if (ban.exists()) {
+        await showCustomAlert("Você foi banido e será desconectado.");
+        auth.signOut(); // Desconecta o usuário banido
+        return;
+      }
+
+      const nameSnap = await namesRef.child(user.uid).once("value");
+      let nick;
+
+      if (!nameSnap.exists()) {
+        let tryName;
+        let nameExists = true;
+        while (nameExists) {
+          tryName = await showCustomPrompt("Escolha um nome único:", "text");
+          if (!tryName) {
+            auth.signOut(); // Se o usuário cancelar a escolha do nome, desloga
+            return;
+          }
+          // Verifica se o nome já está em uso por outro UID
+          const exists = await namesRef.orderByValue().equalTo(tryName).once("value");
+          if (exists.exists()) {
+            await showCustomAlert("Nome já está em uso. Por favor, escolha outro.");
+          } else {
+            nameExists = false;
+          }
+        }
+        await namesRef.child(user.uid).set(tryName);
+        nick = tryName;
+      } else {
+        nick = nameSnap.val();
+      }
+
+      userInfo.innerHTML = `👤 Logado como: <strong>${nick}</strong>`;
+      onlineRef.child(user.uid).set(true);
+      onlineRef.child(user.uid).onDisconnect().remove();
     } else {
+      loginBtn.textContent = "Registrar ou Fazer Login";
       loginBtn.style.display = "inline-block";
       logoutBtn.style.display = "none";
-      userInfo.textContent = "";
+      deleteBtn.style.display = "none";
+      userInfo.innerHTML = "Faça login para comentar.";
+      nameInput.style.display = "inline-block"; // Show name input if not logged in
     }
   });
 
   form.addEventListener("submit", async e => {
     e.preventDefault();
     const user = auth.currentUser;
-    if (!user) return alert("Você precisa estar logado.");
+    let userName = nameInput.value.trim(); // Get name from input if not logged in
+
+    if (!user && !userName) {
+      showAlert("Por favor, forneça seu nome ou faça login para comentar.", true);
+      return;
+    }
+
+    if (user) {
+      const nickSnap = await namesRef.child(user.uid).once("value");
+      userName = nickSnap.exists() ? nickSnap.val() : "Anônimo"; // Use registered name if logged in
+    }
+
 
     const text = messageInput.value.trim();
-    if (!text) return alert("Mensagem vazia.");
+    if (!text) return;
 
-    const nick = user.displayName;
-    const replyTo = window.currentReply || null;
-
-    await commentsRef.push({
-      uid: user.uid,
-      name: nick,
-      message: text.replace(/\n/g, "<br>"),
-      timestamp: firebase.database.ServerValue.TIMESTAMP,
-      replyTo
-    });
-
-    messageInput.value = "";
-    cancelReply();
+    try {
+      await commentsRef.push({
+        uid: user ? user.uid : null, // Store UID if logged in
+        name: userName,
+        message: text,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      });
+      messageInput.value = "";
+    } catch (error) {
+      showAlert(`Erro ao enviar comentário: ${error.message}`, true);
+    }
   });
 
-  commentsRef.on("value", snap => {
+  commentsRef.on("value", async snapshot => {
     commentsDiv.innerHTML = "";
-    snap.forEach(child => {
-      const c = child.val();
+    const user = auth.currentUser;
+    const isAdmin = user && user.uid === ADMIN_UID;
+
+    const commentsArray = [];
+    snapshot.forEach(child => {
+      commentsArray.push({ key: child.key, ...child.val() });
+    });
+
+    // Display comments in chronological order (oldest first, like a chat)
+    commentsArray.sort((a, b) => a.timestamp - b.timestamp);
+
+    for (const commentData of commentsArray) {
+      const c = commentData;
       const div = document.createElement("div");
       div.className = "comment";
 
-      const date = new Date(c.timestamp);
-      const dataFormatada = `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
-
-      div.innerHTML = `
-        <strong>${c.name}</strong>: ${c.message}<br>
-        <span class="timestamp">${dataFormatada}</span>
-      `;
-
-      if (c.replyTo) {
-        const r = c.replyTo;
-        div.innerHTML += `
-          <div style="background:#eef; padding:5px; margin-top:5px; border-left:2px solid #007bff; font-size:0.9em;">
-            <strong>Em resposta a ${r.nome}:</strong><br>
-            <span style="font-style: italic;">${r.texto}</span>
-          </div>
-        `;
+      if (user && user.uid === c.uid) {
+        div.classList.add("own");
+      }
+      if (c.uid === ADMIN_UID) {
+        div.classList.add("admin"); // Add admin class for specific styling
       }
 
-      const btn = document.createElement("button");
-      btn.textContent = "\u21AA\uFE0F";
-      btn.onclick = () => responderMensagem(c.name, c.message.replace(/<br>/g, "\n"), child.key);
-      div.appendChild(btn);
+      const date = new Date(c.timestamp);
+      const dataFormatada = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
-      commentsDiv.prepend(div);
-    });
+      div.innerHTML = `
+        <div class="comment-header">
+          <span class="comment-author">${c.name}</span>
+          <span class="comment-timestamp">(${dataFormatada})</span>
+        </div>
+        <div class="comment-message">${c.message}</div>
+      `;
+
+      const actionsDiv = document.createElement("div");
+      actionsDiv.className = "comment-actions";
+
+      if (user && user.uid === c.uid) {
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Editar";
+        editBtn.onclick = async () => {
+          const novoTexto = await showCustomPrompt("Edite sua mensagem:", "textarea", c.message);
+          if (novoTexto !== null) { // User didn't cancel
+            if (novoTexto.trim() !== "") {
+              commentsRef.child(commentData.key).update({ message: novoTexto });
+            } else {
+              showAlert("Mensagem não pode ser vazia.", true);
+            }
+          }
+        };
+
+        const deleteOwnBtn = document.createElement("button");
+        deleteOwnBtn.textContent = "Apagar Mensagem";
+        deleteOwnBtn.onclick = async () => {
+          const confirmDelete = await showCustomPrompt("Tem certeza que deseja apagar esta mensagem?", "text", "sim");
+          if (confirmDelete === "sim") {
+            commentsRef.child(commentData.key).remove();
+            showAlert("Mensagem apagada.");
+          } else {
+            showAlert("Operação cancelada.", true);
+          }
+        };
+        actionsDiv.append(editBtn, deleteOwnBtn);
+      }
+
+      if (isAdmin && c.uid !== ADMIN_UID) { // Admin pode apagar/banir outros usuários, mas não a si mesmo.
+        const adminBox = document.createElement("div");
+        adminBox.className = "admin-buttons";
+
+        const del = document.createElement("button");
+        del.textContent = "🗑️ Apagar";
+        del.onclick = async () => {
+          const confirmDel = await showCustomPrompt("Tem certeza que deseja apagar esta mensagem?", "text", "sim");
+          if (confirmDel === "sim") {
+            commentsRef.child(commentData.key).remove();
+            showAlert("Mensagem apagada pelo admin.");
+          } else {
+            showAlert("Operação cancelada.", true);
+          }
+        };
+
+        const ban = document.createElement("button");
+        ban.textContent = "🚫 Banir Usuário";
+        ban.onclick = async () => {
+          const confirmBan = await showCustomPrompt(`Tem certeza que deseja banir ${c.name}? Isso também apagará os comentários dele.`, "text", "sim");
+          if (confirmBan === "sim") {
+            bannedRef.child(c.uid).set(true); // Adiciona o UID à lista de banidos
+            await showCustomAlert(`${c.name} foi banido.`);
+            // Apaga todos os comentários do usuário banido
+            await commentsRef.orderByChild("uid").equalTo(c.uid).once("value", snapshot => {
+              snapshot.forEach(child => child.ref.remove());
+            });
+            // Tenta deslogar o usuário banido se ele estiver online
+            onlineRef.child(c.uid).remove(); // Remove o status online do banido
+          } else {
+            showAlert("Operação cancelada.", true);
+          }
+        };
+        adminBox.append(del, ban);
+        actionsDiv.appendChild(adminBox);
+      }
+
+      if (actionsDiv.children.length > 0) {
+        div.appendChild(actionsDiv);
+      }
+
+      commentsDiv.appendChild(div); // Append to show chronological order
+    }
+  });
+
+  onlineRef.on("value", snap => {
+    userCount.textContent = `👥 Usuários online: ${snap.numChildren()}`;
   });
 </script>
 </body>
