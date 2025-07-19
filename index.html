@@ -1,1024 +1,1157 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Livro + Comentários</title>
-  <style>
-    :root {
-      --bg: #1e1e1e; /* Darker background for chat feel */
-      --fg: #ffffff;
-      --accent: #5865f2; /* Azul mais forte */
-      --border: #36393f; /* Darker border for chat feel */
-      --comment-bg: #36393f; /* Discord dark grey for comments */
-      --comment-own-bg: #4f545c; /* Slightly lighter grey for own comments */
-      --admin-bg: #5865f2; /* Admin comments também com o azul mais forte */
-      --input-bg: #40444b;
-      --button-hover: #4752c4; /* Ajuste para o hover do botão */
-      --danger-btn: #f04747; /* Vermelho para ações de perigo */
-      --danger-btn-hover: #cc3a3a;
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Discord font stack */
-      background: var(--bg);
-      color: var(--fg);
-      padding: 20px;
-      margin: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-    .container {
-      max-width: 700px; /* Slightly wider for chat layout */
-      width: 100%;
-      margin: auto;
-      background: #2f3136; /* Discord main background */
-      padding: 30px;
-      border-radius: 8px; /* Slightly less rounded */
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-    h2 {
-      text-align: center;
-      color: var(--fg);
-      margin-bottom: 20px;
-    }
-    #user-controls {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 10px;
-      flex-wrap: wrap; /* Allow wrapping on smaller screens */
-    }
-    #comment-form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 10px; /* Less margin */
-    }
-    #comment-form input,
-    #comment-form textarea {
-      padding: 12px;
-      background: var(--input-bg);
-      border: 1px solid var(--border);
-      color: var(--fg);
-      border-radius: 5px;
-      resize: vertical; /* Allow vertical resize for textarea */
-    }
-    button {
-      padding: 10px 15px; /* More balanced padding */
-      background: var(--accent);
-      border: none;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background-color 0.2s ease;
-    }
-    button:hover {
-      background-color: var(--button-hover);
-    }
-    #comments {
-      margin-top: 20px;
-      display: flex;
-      flex-direction: column-reverse; /* Newest comments at the bottom (like chat) */
-      gap: 15px; /* Spacing between chat messages */
-    }
-    .comment {
-      background: var(--comment-bg);
-      border: none; /* No border for chat look */
-      padding: 12px 15px;
-      border-radius: 8px; /* Rounded message bubbles */
-      word-wrap: break-word; /* Ensure long words wrap */
-    }
-    .comment.own {
-      background: var(--comment-own-bg);
-    }
-    .comment.admin {
-      background: var(--admin-bg); /* Admin comments distinct */
-    }
-    .comment-header {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-      margin-bottom: 5px;
-    }
-    .comment-author {
-      font-weight: bold;
-      color: var(--accent); /* Author name in accent color */
-    }
-    .comment.admin .comment-author {
-      color: #c4c4ff; /* Um azul mais claro e vibrante para o nome do Admin */
-      text-shadow: 0 0 5px rgba(196, 196, 255, 0.5); /* Um brilho sutil */
-    }
-    .comment-timestamp {
-      font-size: 0.8em;
-      color: #b9bbbe; /* Um cinza mais claro para a data e hora */
-    }
-    .comment.admin .comment-timestamp {
-      color: #e0e0ff; /* Azul bem claro para a data e hora dos comentários do Admin */
-    }
-    .comment-message {
-      margin-top: 5px;
-      white-space: pre-wrap; /* Preserve whitespace and line breaks */
-    }
-    .comment-actions {
-      margin-top: 8px;
-      display: flex;
-      gap: 8px; /* Spacing between action buttons */
-    }
-    .comment-actions button {
-      padding: 6px 10px; /* Smaller padding for action buttons */
-      font-size: 0.85em;
-    }
-    .admin-buttons {
-      margin-left: auto; /* Push admin buttons to the right */
-      display: flex;
-      gap: 8px;
-    }
-    .admin-buttons button {
-      background-color: var(--danger-btn); /* Red for delete/ban */
-    }
-    .admin-buttons button:hover {
-      background-color: var(--danger-btn-hover);
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comentários em Tempo Real</title>
+    <link rel="icon" type="image/x-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Google-flutter-logo.svg/1024px-Google-flutter-logo.svg.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #282c34;
+            color: #f8f8f2;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
 
-    /* Custom Modal/Alert Styling */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.7);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      display: none; /* Hidden by default */
-    }
-    .modal-content {
-      background: #36393f;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-      max-width: 450px;
-      width: 90%;
-      text-align: center;
-      color: var(--fg);
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .modal-content input, .modal-content textarea {
-      padding: 10px;
-      background: var(--input-bg);
-      border: 1px solid var(--border);
-      color: var(--fg);
-      border-radius: 5px;
-      width: 100%;
-    }
-    .modal-content .modal-buttons {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-    }
-    .modal-content .modal-buttons button {
-      flex: 1;
-      padding: 10px;
-    }
-    .modal-content .modal-buttons .cancel-btn {
-      background-color: #72767d;
-    }
-    .modal-content .modal-buttons .cancel-btn:hover {
-      background-color: #5d6067;
-    }
+        .container {
+            background-color: #33363d;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            width: 100%;
+            max-width: 700px;
+            box-sizing: border-box;
+        }
 
-    #alert-box {
-      display: none;
-      background: #43b581; /* Discord green for success */
-      color: #fff;
-      border: none;
-      padding: 10px;
-      border-radius: 5px;
-      text-align: center;
-      font-weight: bold;
-      margin-bottom: 15px; /* Spacing below alert */
-    }
-    .error-alert {
-      background: var(--danger-btn) !important; /* Discord red for errors */
-    }
+        h1 {
+            color: #61dafb;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 2.2em;
+        }
 
-    /* --- Reply Box Styling (for composing a reply) --- */
-    #reply-box {
-        background-color: var(--comment-bg);
-        border-radius: 5px;
-        padding: 8px 12px;
-        margin-bottom: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.9em;
-        color: #b9bbbe;
-        border-left: 3px solid var(--accent); /* Indicate it's a reply context */
-    }
-    #reply-box .reply-message {
-        flex-grow: 1;
-    }
-    #reply-box .cancel-reply-btn {
-        background: none;
-        border: none;
-        color: var(--danger-btn); /* Red X */
-        font-size: 1.2em;
-        cursor: pointer;
-        padding: 0 5px;
-    }
-    #reply-box .cancel-reply-btn:hover {
-        color: var(--danger-btn-hover);
-    }
-    /* --- Styles for displaying a sent reply (quote block) --- */
-    .comment-reply-block {
-        background-color: #40444b; /* Slightly darker than comment-bg */
-        border-left: 4px solid var(--accent);
-        padding: 8px 12px;
-        border-radius: 5px;
-        margin-bottom: 10px; /* Space between quote and current message */
-        font-size: 0.9em;
-        color: #dcdcdc;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        max-width: 100%; /* Ensure it fits within parent */
-    }
-    .comment-reply-block .reply-block-author {
-        font-weight: bold;
-        color: var(--accent); /* Same accent color for author */
-    }
-    .comment-reply-block .reply-block-message {
-        font-style: italic;
-        color: #b9bbbe; /* Lighter grey for the message snippet */
-        overflow: hidden;
-        white-space: nowrap; /* Keep snippet on one line */
-        text-overflow: ellipsis; /* Add ellipsis if text is too long */
-    }
-    .comment-reply-block.comment-reply-deleted {
-        background-color: #5d6067; /* Different color for deleted reply */
-        border-left-color: var(--danger-btn); /* Red border for deleted */
-        color: var(--danger-btn); /* Text color for deleted message */
-    }
-    .comment-reply-block.comment-reply-deleted .reply-block-message {
-        font-style: normal; /* No italics for deleted message text */
-        color: var(--danger-btn);
-    }
+        .auth-section, .comment-input-section, .comments-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background-color: #3a3f47;
+            border-radius: 8px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
 
-    /* --- NEW CSS FOR MARKDOWN --- */
-    .comment-message b, .comment-message strong {
-      font-weight: bold;
-    }
-    .comment-message i, .comment-message em {
-      font-style: italic;
-    }
-    .comment-message s, .comment-message del {
-      text-decoration: line-through;
-    }
-    .comment-message code {
-      background-color: #2b2d31; /* Discord code block color */
-      padding: 2px 4px;
-      border-radius: 3px;
-      font-family: monospace;
-    }
-    .comment-message pre {
-      background-color: #2b2d31;
-      padding: 8px 10px;
-      border-radius: 5px;
-      overflow-x: auto;
-      font-family: monospace;
-      margin-top: 5px;
-      margin-bottom: 5px;
-    }
-    .comment-message blockquote {
-      border-left: 4px solid #4f545c;
-      padding-left: 10px;
-      margin: 5px 0;
-      color: #c4c4c4;
-    }
+        input[type="email"],
+        input[type="password"],
+        input[type="text"],
+        textarea {
+            width: calc(100% - 20px);
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #555;
+            border-radius: 5px;
+            background-color: #444;
+            color: #f8f8f2;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
 
-    /* --- NEW CSS FOR MENTIONS --- */
-    .mention {
-      color: var(--accent); /* Discord blue for mentions */
-      background-color: rgba(88, 101, 242, 0.2); /* Light blue background */
-      padding: 1px 4px;
-      border-radius: 3px;
-      font-weight: bold;
-      cursor: pointer; /* Indicate it's clickable, even if no action */
-    }
+        input::placeholder, textarea::placeholder {
+            color: #bbb;
+        }
 
-    /* --- NEW CSS FOR MENTION SUGGESTIONS --- */
-    #mention-suggestions {
-      display: none;
-      position: absolute;
-      z-index: 100;
-      background-color: #36393f; /* Dark background */
-      border: 1px solid #2f3136;
-      border-radius: 5px;
-      max-height: 200px;
-      overflow-y: auto;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-      list-style: none; /* Ensure no list bullets */
-      padding: 0;
-      margin: 0;
-      text-align: left; /* Align text left */
-    }
-    #mention-suggestions ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    #mention-suggestions ul li {
-      padding: 8px 12px;
-      cursor: pointer;
-      color: var(--fg);
-    }
-    #mention-suggestions ul li:hover,
-    #mention-suggestions ul li.selected {
-      background-color: var(--accent);
-      color: white;
-    }
-  </style>
-</head>
+        button {
+            background-color: #61dafb;
+            color: #282c34;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #21a1f1;
+        }
+
+        button:last-child {
+            margin-right: 0;
+        }
+
+        .auth-buttons button {
+            width: calc(50% - 5px);
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        .auth-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .comment {
+            background-color: #4a4e58;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease-in-out;
+            border-left: 5px solid #61dafb;
+        }
+
+        .comment.own {
+            border-left: 5px solid #28a745;
+            background-color: #4f535d;
+        }
+
+        .comment.admin {
+            border-left: 5px solid #ffc107;
+            background-color: #555963;
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+        }
+
+        .comment-author {
+            font-weight: bold;
+            color: #61dafb;
+            font-size: 1.1em;
+        }
+
+        .comment.own .comment-author {
+            color: #28a745;
+        }
+
+        .comment.admin .comment-author {
+            color: #ffc107;
+        }
+
+        .comment-timestamp {
+            font-size: 0.8em;
+            color: #bbb;
+        }
+
+        .comment-message {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .comment-actions button {
+            padding: 8px 12px;
+            font-size: 0.9em;
+            margin-right: 8px;
+            margin-top: 5px;
+            background-color: #5a5e6b;
+            color: #f8f8f2;
+        }
+
+        .comment-actions button:hover {
+            background-color: #727786;
+        }
+
+        .admin-buttons button {
+            background-color: #dc3545; /* Red for delete/ban */
+            color: #fff;
+        }
+        .admin-buttons button:hover {
+            background-color: #c82333;
+        }
+
+        #status {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #f8f8f2;
+        }
+
+        #userCount {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            color: #61dafb;
+        }
+
+        #alert-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50; /* Green */
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            text-align: center;
+            min-width: 250px;
+        }
+
+        #alert-box.error {
+            background-color: #f44336; /* Red */
+        }
+
+        .markdown-cheatsheet {
+            background-color: #3a3f47;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #ccc;
+        }
+        .markdown-cheatsheet h3 {
+            color: #61dafb;
+            margin-top: 0;
+        }
+        .markdown-cheatsheet ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .markdown-cheatsheet li {
+            margin-bottom: 5px;
+        }
+        .markdown-cheatsheet code {
+            background-color: #282c34;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #e06c75;
+        }
+        .markdown-cheatsheet strong {
+            color: #98c379;
+        }
+        .markdown-cheatsheet em {
+            color: #e5c07b;
+        }
+
+        .mention {
+            color: #8be9fd; /* Cor de destaque para menções */
+            font-weight: bold;
+            background-color: #555;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        
+        /* Estilos para o prompt customizado */
+        .custom-prompt-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .custom-prompt-box {
+            background-color: #3a3f47;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .custom-prompt-box p {
+            margin-bottom: 20px;
+            color: #f8f8f2;
+            font-size: 1.1em;
+        }
+
+        .custom-prompt-box input[type="text"],
+        .custom-prompt-box textarea {
+            width: calc(100% - 20px);
+            margin-bottom: 20px;
+        }
+        .custom-prompt-box textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .custom-prompt-box button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            font-size: 1em;
+        }
+        .custom-prompt-box button.confirm {
+            background-color: #28a745;
+        }
+        .custom-prompt-box button.confirm:hover {
+            background-color: #218838;
+        }
+        .custom-prompt-box button.cancel {
+            background-color: #dc3545;
+        }
+        .custom-prompt-box button.cancel:hover {
+            background-color: #c82333;
+        }
+
+        /* Estilos para o popup de nome de usuário */
+        #username-prompt-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000; /* Acima de outros prompts */
+        }
+
+        #username-prompt-box {
+            background-color: #3a3f47;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.7);
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            border-top: 5px solid #61dafb;
+        }
+
+        #username-prompt-box h2 {
+            color: #61dafb;
+            margin-bottom: 20px;
+        }
+
+        #username-prompt-box p {
+            color: #f8f8f2;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        #username-prompt-box input[type="text"] {
+            font-size: 1.1em;
+            padding: 15px;
+            margin-bottom: 25px;
+        }
+
+        #username-prompt-box button {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            background-color: #61dafb;
+            color: #282c34;
+        }
+
+        #username-prompt-box button:hover {
+            background-color: #21a1f1;
+        }
+
+        /* REPLY BOX */
+        #replyBox {
+            background-color: #555;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            display: none; /* Inicia oculto */
+        }
+
+        #replyMessageSpan {
+            flex-grow: 1;
+            color: #f8f8f2;
+            margin-right: 10px;
+            font-style: italic;
+        }
+
+        #cancelReplyBtn {
+            background-color: #dc3545;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 50%; /* Torna-o redondo */
+            width: 30px; /* Largura e altura para fazer um círculo */
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2em;
+            line-height: 1; /* Alinhamento vertical do 'x' */
+            margin-right: 0; /* Remove a margem extra */
+        }
+
+        #cancelReplyBtn:hover {
+            background-color: #c82333;
+        }
+
+        /* Mention suggestions */
+        #mention-suggestions {
+            border: 1px solid #555;
+            background-color: #444;
+            max-height: 150px;
+            overflow-y: auto;
+            border-radius: 5px;
+            margin-top: -10px; /* Sobrepor um pouco a borda da textarea */
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            display: none; /* Hidden by default */
+        }
+
+        .mention-suggestion-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            color: #f8f8f2;
+        }
+
+        .mention-suggestion-item:hover {
+            background-color: #61dafb;
+            color: #282c34;
+        }
+
+        .comment-reply-block {
+            background-color: #666; /* Um pouco mais claro para se destacar */
+            border-left: 3px solid #61dafb;
+            padding: 8px 12px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            line-height: 1.4;
+            color: #e0e0e0;
+        }
+
+        .comment-reply-block .reply-block-author {
+            font-weight: bold;
+            color: #61dafb; /* Cor da menção para o autor original */
+            margin-right: 5px;
+        }
+
+        .comment-reply-block .reply-block-message {
+            font-style: italic;
+            color: #cccccc;
+        }
+        .comment-reply-block.comment-reply-deleted {
+            background-color: #777;
+            border-color: #999;
+        }
+        .comment-reply-block.comment-reply-deleted .reply-block-message {
+            color: #999;
+            font-weight: normal;
+        }
+          </style>
+          </head>
 <body>
-<div class="container">
-  <div id="alert-box"></div>
-  <h2>Comentários</h2>
-  <div id="user-info-section">
-    <p id="user-info"></p>
-    <p id="user-count"></p>
-  </div>
-  <div id="user-controls">
-    <button id="login-btn">Registrar</button>
-    <button id="logout-btn" style="display:none;">Sair</button>
-    <button id="delete-account" style="display:none;">Apagar minha conta</button>
-  </div>
-
-  <form id="comment-form">
-    <input type="text" id="name" placeholder="Seu nome (só se não estiver logado)" style="display:none;" />
-    <div id="reply-box" style="display:none;">
-        <span class="reply-message"></span>
-        <button type="button" class="cancel-reply-btn">X</button>
-    </div>
-    <textarea id="message" placeholder="Seu comentário" required rows="3"></textarea>
-
-    <div id="mention-suggestions">
-      <ul></ul>
-    </div>
-    <button type="submit">Enviar</button>
-  </form>
-  <div id="comments"></div>
-</div>
-
-
-<div id="custom-modal" class="modal-overlay">
-  <div class="modal-content">
-    <p id="modal-message"></p>
-    <input type="text" id="modal-input" style="display:none;" />
-    <textarea id="modal-textarea" style="display:none;"></textarea>
-    <div class="modal-buttons">
-      <button id="modal-confirm-btn">Confirmar</button>
-      <button id="modal-cancel-btn" class="cancel-btn" style="display:none;">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",
-    authDomain: "comentarios-livro.firebaseapp.com",
-    databaseURL: "https://comentarios-livro-default-rtdb.firebaseio.com",
-    projectId: "comentarios-livro",
-    storageBucket: "comentarios-livro.appspot.com",
-    messagingSenderId: "702096545512",
-    appId: "1:702096545512:web:f7f305fe579d246c41b5d"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const auth = firebase.auth();
-  const commentsRef = db.ref("comentarios");
-  const namesRef = db.ref("nomesUsados");
-  const onlineRef = db.ref("logados");
-  const bannedRef = db.ref("banidos");
-
-  const ADMIN_UID = "RTJkscPxu9MjMFL4RZSaILntfM13"; // SUBSTITUA PELO SEU UID DE ADMIN REAL
-
-  const loginBtn = document.getElementById("login-btn");
-  const logoutBtn = document.getElementById("logout-btn");
-  const deleteBtn = document.getElementById("delete-account");
-  const userInfo = document.getElementById("user-info");
-  const userCount = document.getElementById("user-count");
-  const form = document.getElementById("comment-form");
-  const nameInput = document.getElementById("name");
-  const messageInput = document.getElementById("message");
-  const commentsDiv = document.getElementById("comments");
-  const alertBox = document.getElementById("alert-box");
-
-  // Custom Modal Elements
-  const customModal = document.getElementById("custom-modal");
-  const modalMessage = document.getElementById("modal-message");
-  const modalInput = document.getElementById("modal-input");
-  const modalTextarea = document.getElementById("modal-textarea");
-  const modalConfirmBtn = document.getElementById("modal-confirm-btn");
-  const modalCancelBtn = document.getElementById("modal-cancel-btn");
-
-  // Reply functionality elements
-  const replyBox = document.getElementById("reply-box");
-  const replyMessageSpan = replyBox.querySelector(".reply-message");
-  const cancelReplyBtn = replyBox.querySelector(".cancel-reply-btn");
-
-  // NEW GLOBALS for mention system
-  const mentionSuggestions = document.getElementById("mention-suggestions");
-  const mentionSuggestionsList = mentionSuggestions.querySelector("ul");
-  let currentSuggestions = [];
-  let selectedSuggestionIndex = -1;
-
-  let replyToCommentId = null;
-  let replyToAuthorName = null;
-
-  function showAlert(msg, isError = false) {
-    alertBox.textContent = msg;
-    alertBox.style.display = "block";
-    if (isError) {
-      alertBox.classList.add("error-alert");
-    } else {
-      alertBox.classList.remove("error-alert");
-    }
-    setTimeout(() => alertBox.style.display = "none", 4000);
-  }
-
-  function showCustomPrompt(message, type = 'text', defaultValue = '') {
-    return new Promise(resolve => {
-      modalMessage.textContent = message;
-      modalInput.style.display = 'none';
-      modalTextarea.style.display = 'none';
-      modalConfirmBtn.style.display = 'inline-block';
-      modalCancelBtn.style.display = 'inline-block';
-
-      if (type === 'text') {
-        modalInput.value = defaultValue;
-        modalInput.style.display = 'block';
-        modalInput.focus();
-      } else if (type === 'textarea') {
-        modalTextarea.value = defaultValue;
-        modalTextarea.style.display = 'block';
-        modalTextarea.focus();
-      }
-
-      customModal.style.display = 'flex';
-
-      const confirmHandler = () => {
-        const value = type === 'text' ? modalInput.value : modalTextarea.value;
-        customModal.style.display = 'none';
-        modalConfirmBtn.removeEventListener('click', confirmHandler);
-        modalCancelBtn.removeEventListener('click', cancelHandler);
-        resolve(value);
-      };
-
-      const cancelHandler = () => {
-        customModal.style.display = 'none';
-        modalConfirmBtn.removeEventListener('click', confirmHandler);
-        modalCancelBtn.removeEventListener('click', cancelHandler);
-        resolve(null);
-      };
-
-      modalConfirmBtn.addEventListener('click', confirmHandler);
-      modalCancelBtn.addEventListener('click', cancelHandler);
-    });
-  }
-
-  function showCustomAlert(message) {
-    return new Promise(resolve => {
-      modalMessage.textContent = message;
-      modalInput.style.display = 'none';
-      modalTextarea.style.display = 'none';
-      modalCancelBtn.style.display = 'none'; // No cancel for alert
-      modalConfirmBtn.textContent = 'Ok'; // Change button text for alert
-      customModal.style.display = 'flex';
-
-      const confirmHandler = () => {
-        customModal.style.display = 'none';
-        modalConfirmBtn.removeEventListener('click', confirmHandler);
-        modalConfirmBtn.textContent = 'Confirmar'; // Reset button text
-        resolve();
-      };
-      modalConfirmBtn.addEventListener('click', confirmHandler);
-    });
-  }
-
-  // NEW FUNCTION: parseMarkdown
-  function parseMarkdown(text) {
-    // Escapes HTML to prevent XSS before parsing markdown
-    let escapedText = text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-
-    // Inline code: `code`
-    escapedText = escapedText.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-    // Code blocks: ```code```
-    escapedText = escapedText.replace(/```([\s\S]+?)```/g, '<pre>$1</pre>');
-
-    // Bold Italic: ***text*** or ___text___
-    escapedText = escapedText.replace(/(\*\*\*|___)(.*?)\1/g, '<strong><em>$2</em></strong>');
-    // Bold: **text** or __text__
-    escapedText = escapedText.replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>');
-    // Italic: *text* or _text_
-    escapedText = escapedText.replace(/(\*|_)(.*?)\1/g, '<em>$2</em>');
-    // Strikethrough: ~text~
-    escapedText = escapedText.replace(/~([^~]+)~/g, '<s>$1</s>');
-    // Blockquote: > text
-    // Handles multiple lines starting with >
-    escapedText = escapedText.replace(/^(>\s*.*(?:\n(?=>\s*).*)*)/gm, '<blockquote>$1</blockquote>');
-    // Remove the leading `>` from inside blockquote content for cleaner display
-    escapedText = escapedText.replace(/<blockquote>\s*>\s*/g, '<blockquote>'); // Fix for the first line
-    escapedText = escapedText.replace(/\n>\s*/g, '\n'); // Fix for subsequent lines
-
-    // Newlines to <br> for display, but only outside of <pre> tags
-    // This is a simplified approach. A full Markdown parser would be more robust.
-    escapedText = escapedText.replace(/\n(?!<pre>|<\/pre>)/g, '<br>');
-
-    return escapedText;
-  }
-
-  // New functions for reply
-  function startReply(commentId, authorName) {
-      replyToCommentId = commentId;
-      replyToAuthorName = authorName;
-      replyMessageSpan.textContent = `Respondendo a ${authorName}`;
-      replyBox.style.display = 'flex';
-      messageInput.focus();
-  }
-
-  function cancelReply() {
-      replyToCommentId = null;
-      replyToAuthorName = null;
-      replyBox.style.display = 'none';
-      replyMessageSpan.textContent = '';
-  }
-
-  // Event listener for cancel reply button
-  cancelReplyBtn.addEventListener('click', cancelReply);
-
-  // NEW FUNCTIONS FOR MENTION AUTOCOMPLETE
-  async function updateMentionSuggestions() {
-    const text = messageInput.value;
-    const cursorPosition = messageInput.selectionStart;
-    const wordStart = text.lastIndexOf('@', cursorPosition - 1);
-
-    if (wordStart !== -1 && (wordStart === 0 || /\s/.test(text[wordStart - 1]))) {
-      const mentionQuery = text.substring(wordStart + 1, cursorPosition).toLowerCase();
-
-           // Fetch all online users and their names
-      const onlineUsersSnapshot = await onlineRef.once("value");
-      const onlineUserUids = [];
-      onlineUsersSnapshot.forEach(child => onlineUserUids.push(child.key));
-
-      const allUserNamesPromises = onlineUserUids.map(uid => namesRef.child(uid).once("value").then(snap => ({uid, name: snap.val()})));
-      const allUserNames = (await Promise.all(allUserNamesPromises)).filter(u => u.name);
-
-      currentSuggestions = allUserNames.filter(user => user.name.toLowerCase().startsWith(mentionQuery));
-
-      renderMentionSuggestions();
-      if (currentSuggestions.length > 0) {
-        mentionSuggestions.style.display = 'block';
-        // Position the suggestion box
-        const rect = messageInput.getBoundingClientRect();
-        mentionSuggestions.style.top = `${rect.bottom + window.scrollY + 5}px`;
-        mentionSuggestions.style.left = `${rect.left + window.scrollX}px`;
-        mentionSuggestions.style.minWidth = `${rect.width}px`; // Match input width
-      } else {
-        mentionSuggestions.style.display = 'none';
-      }
-    } else {
-      mentionSuggestions.style.display = 'none';
-      selectedSuggestionIndex = -1; // Reset selection when not typing a mention
-    }
-  }
-
-  function renderMentionSuggestions() {
-    mentionSuggestionsList.innerHTML = '';
-    if (currentSuggestions.length === 0) {
-      mentionSuggestions.style.display = 'none';
-      return;
-    }
-
-    currentSuggestions.forEach((user, index) => {
-      const li = document.createElement('li');
-      li.textContent = `@${user.name}`;
-      li.dataset.uid = user.uid; // Store UID if needed for more complex logic later
-      li.dataset.name = user.name;
-      if (index === selectedSuggestionIndex) {
-        li.classList.add('selected');
-      }
-      li.addEventListener('click', () => selectMention(user.name));
-      mentionSuggestionsList.appendChild(li);
-    });
-  }
-
-  function selectMention(selectedName) {
-    const text = messageInput.value;
-    const cursorPosition = messageInput.selectionStart;
-    const wordStart = text.lastIndexOf('@', cursorPosition - 1);
-
-    if (wordStart !== -1) {
-      const before = text.substring(0, wordStart);
-      const after = text.substring(cursorPosition);
-      messageInput.value = `${before}@${selectedName} ${after}`;
-      // Position cursor after the inserted name
-      messageInput.selectionStart = messageInput.selectionEnd = before.length + selectedName.length + 2;
-      mentionSuggestions.style.display = 'none';
-      selectedSuggestionIndex = -1; // Reset selection
-    }
-  }
-
-  // Event Listeners for messageInput for mentions
-  messageInput.addEventListener('input', updateMentionSuggestions);
-
-  messageInput.addEventListener('keydown', (e) => {
-    if (mentionSuggestions.style.display === 'block' && currentSuggestions.length > 0) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        selectedSuggestionIndex = (selectedSuggestionIndex + 1) % currentSuggestions.length;
-        renderMentionSuggestions();
-        mentionSuggestionsList.children[selectedSuggestionIndex].scrollIntoView({ block: "nearest" });
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        selectedSuggestionIndex = (selectedSuggestionIndex - 1 + currentSuggestions.length) % currentSuggestions.length;
-        renderMentionSuggestions();
-        mentionSuggestionsList.children[selectedSuggestionIndex].scrollIntoView({ block: "nearest" });
-      } else if (e.key === 'Enter') {
-        e.preventDefault(); // Prevent default form submission
-        if (selectedSuggestionIndex !== -1) {
-          selectMention(currentSuggestions[selectedSuggestionIndex].name);
-          selectedSuggestionIndex = -1; // Reset selection
-        } else {
-          // If no suggestion is explicitly selected, allow normal enter to submit
-          form.dispatchEvent(new Event('submit')); // Trigger form submission
-        }
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        mentionSuggestions.style.display = 'none';
-        selectedSuggestionIndex = -1;
-      }
-    } else if (e.key === 'Enter' && !e.shiftKey) { // Allow Shift+Enter for new line when no suggestions
-      e.preventDefault();
-      form.dispatchEvent(new Event('submit'));
-    }
-  });
-
-  // Hide suggestions if clicking outside
-  document.addEventListener('click', (e) => {
-    if (!messageInput.contains(e.target) && !mentionSuggestions.contains(e.target)) {
-      mentionSuggestions.style.display = 'none';
-      selectedSuggestionIndex = -1;
-    }
-  });
-
-
-  // Troca botão de registro/login
-  loginBtn.textContent = "Registrar";
-  loginBtn.addEventListener("click", () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    auth.signInWithPopup(provider).catch(error => {
-      showAlert(`Erro ao fazer login: ${error.message}`, true);
-    });
-  });
-
-  logoutBtn.addEventListener("click", () => {
-    const user = auth.currentUser;
-    if (user) {
-      onlineRef.child(user.uid).remove(); // Remove o status online
-      auth.signOut().then(() => {
-        // REMOVIDO: location.reload(); para dinamismo
-      }).catch(error => {
-        showAlert(`Erro ao sair: ${error.message}`, true);
-      });
-    }
-  });
-
-  deleteBtn.addEventListener("click", async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      showAlert("Nenhum usuário logado para apagar.", true);
-      return;
-    }
-    // Impedir que o ADMIN_UID apague a própria conta pelo botão
-    if (user.uid === ADMIN_UID) {
-      showAlert("Não é possível apagar a conta de administrador através desta opção.", true);
-      return;
-    }
-
-    const confirmDelete = await showCustomPrompt("Tem certeza que deseja apagar sua conta? Esta ação é irreversível.", "text", "sim");
-    if (confirmDelete !== "sim") {
-      showAlert("Operação cancelada.", true);
-      return;
-    }
-
-    try {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-        await user.reauthenticateWithPopup(provider);
-
-        await commentsRef.orderByChild("uid").equalTo(user.uid).once("value", snapshot => {
-            snapshot.forEach(child => child.ref.remove());
-        });
-        await namesRef.child(user.uid).remove();
-        await onlineRef.child(user.uid).remove();
-
-        await user.delete();
-
-        showAlert("Conta apagada com sucesso. Você foi desconectado.");
-        // REMOVIDO: location.reload(); para dinamismo
-    } catch (error) {
-        console.error("Erro ao apagar conta:", error);
-        if (error.code === 'auth/requires-recent-login') {
-            await showCustomAlert("Por favor, faça login novamente para apagar sua conta. (Requerido para operações de segurança)");
-        } else if (error.code === 'auth/popup-closed-by-user') {
-            showAlert("Reautenticação cancelada pelo usuário. Conta não apagada.", true);
-        } else if (error.code === 'auth/cancelled-popup-request') {
-             showAlert("Reautenticação cancelada: janela de pop-up já aberta ou bloqueada. Tente novamente.", true);
-        }
-        else {
-            showAlert(`Erro ao apagar conta: ${error.message}`, true);
-        }
-    }
-  });
-
-  auth.onAuthStateChanged(async user => {
-    if (user) {
-      loginBtn.style.display = "none";
-      logoutBtn.style.display = "inline-block";
-      deleteBtn.style.display = "inline-block";
-      nameInput.style.display = "none"; // Hide name input if logged in
-
-      const ban = await bannedRef.child(user.uid).once("value");
-      if (ban.exists()) {
-        await showCustomAlert("Você foi banido e será desconectado.");
-        auth.signOut(); // Desconecta o usuário banido
-        return;
-      }
-
-      const nameSnap = await namesRef.child(user.uid).once("value");
-      let nick;
-
-      if (!nameSnap.exists()) {
-        let tryName;
-        let nameExists = true;
-        while (nameExists) {
-          tryName = await showCustomPrompt("Escolha um nome único:", "text");
-          if (!tryName) {
-            auth.signOut(); // Se o usuário cancelar a escolha do nome, desloga
-            return;
-          }
-          const exists = await namesRef.orderByValue().equalTo(tryName).once("value");
-          if (exists.exists()) {
-            await showCustomAlert("Nome já está em uso. Por favor, escolha outro.");
-          } else {
-            nameExists = false;
-          }
-        }
-        await namesRef.child(user.uid).set(tryName);
-        nick = tryName;
-      } else {
-        nick = nameSnap.val();
-      }
-
-      userInfo.innerHTML = `👤 Logado como: <strong>${nick}</strong>`;
-      onlineRef.child(user.uid).set(true);
-      onlineRef.child(user.uid).onDisconnect().remove();
-    } else {
-      loginBtn.textContent = "Registrar ou Fazer Login";
-      loginBtn.style.display = "inline-block";
-      logoutBtn.style.display = "none";
-      deleteBtn.style.display = "none";
-      userInfo.innerHTML = "Faça login para comentar.";
-      nameInput.style.display = "inline-block"; // Show name input if not logged in
-    }
-  });
-
-  form.addEventListener("submit", async e => {
-    e.preventDefault();
-    const user = auth.currentUser;
-    let userName = nameInput.value.trim();
-
-    if (!user && !userName) {
-      showAlert("Por favor, forneça seu nome ou faça login para comentar.", true);
-      return;
-    }
-
-    if (user) {
-      const nickSnap = await namesRef.child(user.uid).once("value");
-      userName = nickSnap.exists() ? nickSnap.val() : "Anônimo";
-    }
-
-    const text = messageInput.value.trim();
-    if (!text) return;
-
-    const commentData = {
-      uid: user ? user.uid : null,
-      name: userName,
-      message: text,
-      timestamp: firebase.database.ServerValue.TIMESTAMP
-    };
-
-    if (replyToCommentId && replyToAuthorName) {
-        commentData.replyToId = replyToCommentId;
-        commentData.replyToAuthor = replyToAuthorName;
-    }
-
-    try {
-      await commentsRef.push(commentData);
-      messageInput.value = "";
-      cancelReply(); // Limpa o modo de resposta após enviar
-    } catch (error) {
-      showAlert(`Erro ao enviar comentário: ${error.message}`, true);
-    }
-  });
-
-  commentsRef.on("value", async snapshot => {
-    commentsDiv.innerHTML = "";
-    const user = auth.currentUser;
-    const isAdmin = user && user.uid === ADMIN_UID;
-
-    const commentsArray = [];
-    snapshot.forEach(child => {
-      commentsArray.push({ key: child.key, ...child.val() });
-    });
-
-    commentsArray.sort((a, b) => a.timestamp - b.timestamp);
-
-    // Fetch all online users and their names ONCE per commentsRef update
-    const onlineUsersSnapshot = await onlineRef.once("value");
-    const onlineUserUids = [];
-    onlineUsersSnapshot.forEach(child => onlineUserUids.push(child.key));
-    const allUserNamesPromises = onlineUserUids.map(uid => namesRef.child(uid).once("value").then(snap => snap.val()));
-    const allOnlineUserNames = (await Promise.all(allUserNamesPromises)).filter(name => name); // Get all existing names
-
-
-    // Using Promise.all to fetch original comments in parallel for performance
-    const commentsWithReplyData = await Promise.all(commentsArray.map(async (c) => {
-        let replyToHtml = '';
-        if (c.replyToId && c.replyToAuthor) {
-            const originalCommentSnap = await commentsRef.child(c.replyToId).once("value");
-            if (originalCommentSnap.exists()) {
-                const originalComment = originalCommentSnap.val();
-                // Take first 80 characters of the original message for snippet
-                const originalMessageSnippet = originalComment.message.substring(0, 80) + (originalComment.message.length > 80 ? '...' : '');
-                replyToHtml = `
-                    <div class="comment-reply-block">
-                        <span class="reply-block-author">${originalComment.name}</span>
-                        <span class="reply-block-message">${originalMessageSnippet}</span>
-                    </div>
-                `;
-            } else {
-                replyToHtml = `
-                    <div class="comment-reply-block comment-reply-deleted">
-                        <span class="reply-block-message">[Mensagem original apagada]</span>
-                    </div>
-                `;
-            }
-        }
-        return { ...c, replyToHtml: replyToHtml };
-    }));
-
-
-    for (const c of commentsWithReplyData) { // Loop through the new array with replyHtml
-      const div = document.createElement("div");
-      div.className = "comment";
-
-      if (user && user.uid === c.uid) {
-        div.classList.add("own");
-      }
-      if (c.uid === ADMIN_UID) {
-        div.classList.add("admin");
-      }
-
-      const date = new Date(c.timestamp);
-      const dataFormatada = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-
-      // Apply markdown parsing to the message
-      let messageContent = parseMarkdown(c.message);
-
-      // Now, handle mentions within the formatted message.
-      // Iterate over names to replace, starting with longer names to avoid partial matches
-      allOnlineUserNames.sort((a, b) => b.length - a.length).forEach(name => {
-          // Regex to find @username. Ensure it's a word boundary for the username.
-          const regex = new RegExp(`@${name}\\b`, 'g'); // \b for word boundary
-          messageContent = messageContent.replace(regex, `<span class="mention">@${name}</span>`);
-      });
-
-      // Use the pre-fetched replyToHtml and the newly formatted messageContent
-      div.innerHTML = `
-        <div class="comment-header">
-          <span class="comment-author">${c.name}</span>
-          <span class="comment-timestamp">(${dataFormatada})</span>
+    <div id="alert-box"></div>
+
+    <div id="custom-prompt-overlay" class="custom-prompt-overlay" style="display: none;">
+        <div id="custom-prompt-box" class="custom-prompt-box">
+            <p id="custom-prompt-message"></p>
+            <input type="text" id="custom-prompt-input" style="display: none;">
+            <textarea id="custom-prompt-textarea" style="display: none;"></textarea>
+            <button id="custom-prompt-cancel" class="cancel">Cancelar</button>
+            <button id="custom-prompt-confirm" class="confirm">Confirmar</button>
         </div>
-        ${c.replyToHtml}
-        <div class="comment-message">${messageContent}</div> `;
+    </div>
 
-      const actionsDiv = document.createElement("div");
-      actionsDiv.className = "comment-actions";
+    <div id="username-prompt-overlay" style="display: none;">
+        <div id="username-prompt-box">
+            <h2>Seja Bem-vindo!</h2>
+            <p>Por favor, escolha um nome de usuário que será exibido para seus comentários.</p>
+            <input type="text" id="usernameInput" placeholder="Seu nome de usuário">
+            <button id="saveUsernameBtn">Salvar Nome</button>
+        </div>
+    </div>
 
-      const replyBtn = document.createElement("button");
-      replyBtn.textContent = "Responder";
-      replyBtn.onclick = () => {
-          startReply(c.key, c.name); // Use c.key (comment ID) and c.name for reply
-      };
-      actionsDiv.append(replyBtn);
+    <div class="container">
+        <h1>Comentários</h1>
 
+        <div id="status">Por favor, faça login ou registre-se.</div>
+        <div id="userCount"></div>
 
-      if (user && user.uid === c.uid) {
-        const editBtn = document.createElement("button");
-        editBtn.textContent = "Editar";
-        editBtn.onclick = async () => {
-          const novoTexto = await showCustomPrompt("Edite sua mensagem:", "textarea", c.message);
-          if (novoTexto !== null) {
-            if (novoTexto.trim() !== "") {
-              commentsRef.child(c.key).update({ message: novoTexto });
-            } else {
-              showAlert("Mensagem não pode ser vazia.", true);
+        <div id="auth-section" class="auth-section">
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Senha">
+            <div class="auth-buttons">
+                <button id="loginBtn">Login</button>
+                <button id="registerBtn">Registrar</button>
+            </div>
+            <button id="googleSignInBtn" style="background-color: #dd4b39; width: 100%; margin-top: 10px;">
+                <i class="fab fa-google"></i> Login com Google
+            </button>
+        </div>
+
+        <div id="comment-input-section" class="comment-input-section" style="display: none;">
+            <div id="replyBox">
+                <span id="replyMessageSpan"></span>
+                <button id="cancelReplyBtn">x</button>
+            </div>
+            <textarea id="messageInput" placeholder="Seu comentário (suporta Markdown e @menções)"></textarea>
+            <div id="mention-suggestions"></div> <button id="sendCommentBtn">Enviar</button>
+            <button id="logoutBtn" style="background-color: #f44336;">Sair</button>
+            <button id="deleteAccountBtn" style="background-color: #ff9800;">Apagar minha conta</button>
+        </div>
+
+        <div class="markdown-cheatsheet">
+            <h3>Guia Rápido de Markdown:</h3>
+            <ul>
+                <li><strong>Negrito:</strong> `**texto**` ou `__texto__`</li>
+                <li><em>Itálico:</em> `*texto*` ou `_texto_`</li>
+                <li><span style="text-decoration: line-through;">Riscado:</span> `~~texto~~`</li>
+                <li>`Código inline:` `` `codigo` ``</li>
+                <li>`@menção`: `@NomeDoUsuario` (para usuários online)</li>
+            </ul>
+        </div>
+
+        <div id="comments-section" class="comments-section">
+            <h2>Comentários</h2>
+            <div id="commentsDiv"></div>
+        </div>
+    </div>
+      <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script> <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script> <script>
+        // Suas configurações do Firebase
+        const firebaseConfig = {
+            apiKey: "SEU_API_KEY",
+            authDomain: "SEU_AUTH_DOMAIN",
+            projectId: "SEU_PROJECT_ID",
+            storageBucket: "SEU_STORAGE_BUCKET",
+            messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+            appId: "SEU_APP_ID",
+            measurementId: "SEU_MEASUREMENT_ID",
+            databaseURL: "SEU_DATABASE_URL" // Verifique se esta URL está correta
+        };
+
+        // Substitua 'SEU_UID_DE_ADMIN_AQUI' pelo UID do seu usuário administrador
+        const ADMIN_UID = "RTJkscPxu9MjMFL4RZSaILntfM13";
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // Referências ao Realtime Database
+        const commentsRef = database.ref("comentarios");
+        const namesRef = database.ref("nomesUsados");
+        const onlineRef = database.ref("logados");
+        const bannedRef = database.ref("banidos");
+
+        // Referências a elementos HTML
+        const emailInput = document.getElementById("email");
+        const passwordInput = document.getElementById("password");
+        const loginBtn = document.getElementById("loginBtn");
+        const registerBtn = document.getElementById("registerBtn");
+        const googleSignInBtn = document.getElementById("googleSignInBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+        const messageInput = document.getElementById("messageInput");
+        const sendCommentBtn = document.getElementById("sendCommentBtn");
+        const commentsDiv = document.getElementById("commentsDiv");
+        const statusDiv = document.getElementById("status");
+        const authSection = document.getElementById("auth-section");
+        const commentInputSection = document.getElementById("comment-input-section");
+        const userCount = document.getElementById("userCount");
+
+        const replyBox = document.getElementById("replyBox");
+        const replyMessageSpan = document.getElementById("replyMessageSpan");
+        const cancelReplyBtn = document.getElementById("cancelReplyBtn");
+        let replyToCommentId = null;
+        let replyToAuthorName = null;
+
+        const mentionSuggestionsDiv = document.getElementById("mention-suggestions");
+        let allOnlineUserNamesForMentions = []; // Para armazenar nomes de usuários online para sugestões
+
+        // Elementos do prompt customizado
+        const customPromptOverlay = document.getElementById('custom-prompt-overlay');
+        const customPromptMessage = document.getElementById('custom-prompt-message');
+        const customPromptInput = document.getElementById('custom-prompt-input');
+        const customPromptTextarea = document.getElementById('custom-prompt-textarea');
+        const customPromptConfirmBtn = document.getElementById('custom-prompt-confirm');
+        const customPromptCancelBtn = document.getElementById('custom-prompt-cancel');
+
+        // Elementos do prompt de nome de usuário
+        const usernamePromptOverlay = document.getElementById('username-prompt-overlay');
+        const usernameInput = document.getElementById('usernameInput');
+        const saveUsernameBtn = document.getElementById('saveUsernameBtn');
+
+        // Função para mostrar alertas customizados
+        function showAlert(message, isError = false) {
+            const alertBox = document.getElementById("alert-box");
+            alertBox.textContent = message;
+            alertBox.className = "alert-box"; // Reset classes
+            if (isError) {
+                alertBox.classList.add("error");
             }
-          }
-        };
+            alertBox.style.opacity = "1";
+            setTimeout(() => {
+                alertBox.style.opacity = "0";
+            }, 3000);
+        }
 
-        const deleteOwnBtn = document.createElement("button");
-        deleteOwnBtn.textContent = "Apagar Mensagem";
-        deleteOwnBtn.onclick = async () => {
-          const confirmDelete = await showCustomPrompt("Tem certeza que deseja apagar esta mensagem?", "text", "sim");
-          if (confirmDelete === "sim") {
-            commentsRef.child(c.key).remove();
-            showAlert("Mensagem apagada.");
-          } else {
-            showAlert("Operação cancelada.", true);
-          }
-        };
-        actionsDiv.append(editBtn, deleteOwnBtn);
-      }
+        // Função para mostrar o prompt customizado
+        function showCustomPrompt(message, inputType = "text", defaultValue = "") {
+            return new Promise((resolve) => {
+                customPromptMessage.textContent = message;
+                customPromptInput.style.display = "none";
+                customPromptTextarea.style.display = "none";
 
-      if (isAdmin && c.uid !== ADMIN_UID) {
-        const adminBox = document.createElement("div");
-        adminBox.className = "admin-buttons";
+                let inputElement;
+                if (inputType === "textarea") {
+                    customPromptTextarea.style.display = "block";
+                    customPromptTextarea.value = defaultValue;
+                    inputElement = customPromptTextarea;
+                } else {
+                    customPromptInput.style.display = "block";
+                    customPromptInput.value = defaultValue;
+                    inputElement = customPromptInput;
+                }
 
-        const del = document.createElement("button");
-        del.textContent = "🗑️ Apagar";
-        del.onclick = async () => {
-          const confirmDel = await showCustomPrompt("Tem certeza que deseja apagar esta mensagem?", "text", "sim");
-          if (confirmDel === "sim") {
-            commentsRef.child(c.key).remove();
-            showAlert("Mensagem apagada pelo admin.");
-          } else {
-            showAlert("Operação cancelada.", true);
-          }
-        };
+                customPromptOverlay.style.display = "flex";
+                inputElement.focus();
 
-        const ban = document.createElement("button");
-        ban.textContent = "🚫 Banir Usuário";
-        ban.onclick = async () => {
-          const confirmBan = await showCustomPrompt(`Tem certeza que deseja banir ${c.name}? Isso também apagará os comentários dele.`, "text", "sim");
-          if (confirmBan === "sim") {
-            bannedRef.child(c.uid).set(true);
-            await showCustomAlert(`${c.name} foi banido.`);
-            await commentsRef.orderByChild("uid").equalTo(c.uid).once("value", snapshot => {
-              snapshot.forEach(child => child.ref.remove());
+                const handleConfirm = () => {
+                    customPromptOverlay.style.display = "none";
+                    resolve(inputElement.value);
+                    removeListeners();
+                };
+
+                const handleCancel = () => {
+                    customPromptOverlay.style.display = "none";
+                    resolve(null);
+                    removeListeners();
+                };
+
+                const handleKeyDown = (e) => {
+                    if (e.key === 'Enter' && inputType === 'text') { // Permite Enter para 'text' input
+                        handleConfirm();
+                    } else if (e.key === 'Escape') { // Permite Esc para qualquer tipo de input
+                        handleCancel();
+                    }
+                };
+
+                customPromptConfirmBtn.addEventListener("click", handleConfirm);
+                customPromptCancelBtn.addEventListener("click", handleCancel);
+                inputElement.addEventListener("keydown", handleKeyDown);
+
+                const removeListeners = () => {
+                    customPromptConfirmBtn.removeEventListener("click", handleConfirm);
+                    customPromptCancelBtn.removeEventListener("click", handleCancel);
+                    inputElement.removeEventListener("keydown", handleKeyDown);
+                };
             });
-            onlineRef.child(c.uid).remove();
-          } else {
-            showAlert("Operação cancelada.", true);
-          }
-        };
-        adminBox.append(del, ban);
-        actionsDiv.appendChild(adminBox);
-      }
+        }
 
-      if (actionsDiv.children.length > 0) {
-        div.appendChild(actionsDiv);
-      }
+        // Função para mostrar o prompt de nome de usuário
+        async function showUsernamePrompt() {
+            usernamePromptOverlay.style.display = 'flex';
+            usernameInput.focus();
+            return new Promise(resolve => {
+                saveUsernameBtn.onclick = () => {
+                    const username = usernameInput.value.trim();
+                    if (username) {
+                        usernamePromptOverlay.style.display = 'none';
+                        resolve(username);
+                    } else {
+                        showAlert("Por favor, digite um nome de usuário.", true);
+                    }
+                };
+            });
+        }
 
-      commentsDiv.appendChild(div);
-    }
-  });
+        // Função para parsing de Markdown
+        function parseMarkdown(text) {
+            let html = text;
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Negrito **texto**
+            html = html.replace(/__(.*?)__/g, '<strong>$1</strong>'); // Negrito __texto__
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');     // Itálico *texto*
+            html = html.replace(/_(.*?)_/g, '<em>$1</em>');     // Itálico _texto_
+            html = html.replace(/~~(.*?)~~/g, '<s>$1</s>');        // Riscado ~~texto~~
+            html = html.replace(/`(.*?)`/g, '<code>$1</code>');  // Código inline `codigo`
+            html = html.replace(/\n/g, '<br>'); // Quebra de linha
+            return html;
+        }
 
-  onlineRef.on("value", snap => {
-    userCount.textContent = `👥 Usuários online: ${snap.numChildren()}`;
-  });
-</script>
+        // Iniciar resposta
+        function startReply(commentId, authorName) {
+            replyToCommentId = commentId;
+            replyToAuthorName = authorName;
+            replyMessageSpan.textContent = `Respondendo a ${authorName}`;
+            replyBox.style.display = 'flex';
+            messageInput.focus();
+        }
+
+        // Cancelar resposta
+        function cancelReply() {
+            replyToCommentId = null;
+            replyToAuthorName = null;
+            replyBox.style.display = 'none';
+            replyMessageSpan.textContent = '';
+        }
+
+        // Event listener para o botão de cancelar resposta
+        cancelReplyBtn.addEventListener('click', cancelReply);
+
+        // FUNÇÕES PARA AUTOCOMPLETAR MENÇÕES
+        async function updateMentionSuggestions() {
+            const text = messageInput.value;
+            const cursorPos = messageInput.selectionStart;
+            const wordStart = text.lastIndexOf('@', cursorPos - 1);
+
+            mentionSuggestionsDiv.innerHTML = '';
+            mentionSuggestionsDiv.style.display = 'none';
+
+            if (wordStart !== -1 && (wordStart === 0 || /\s/.test(text[wordStart - 1]))) {
+                const mentionQuery = text.substring(wordStart + 1, cursorPos).toLowerCase();
+
+                // Busca todos os usuários online e seus nomes (atualizado para ser mais eficiente)
+                const onlineUsersSnapshot = await onlineRef.once("value");
+                const onlineUserUids = [];
+                onlineUsersSnapshot.forEach(child => onlineUserUids.push(child.key));
+
+                const allUserNamesPromises = onlineUserUids.map(uid => namesRef.child(uid).once("value").then(snap => ({uid, name: snap.val()})));
+                allOnlineUserNamesForMentions = (await Promise.all(allUserNamesPromises)).filter(u => u.name);
+
+                const currentSuggestions = allOnlineUserNamesForMentions.filter(user => user.name.toLowerCase().startsWith(mentionQuery));
+
+                if (currentSuggestions.length > 0) {
+                    mentionSuggestionsDiv.style.display = 'block';
+                    currentSuggestions.forEach(user => {
+                        const item = document.createElement('div');
+                        item.className = 'mention-suggestion-item';
+                        item.textContent = user.name;
+                        item.onclick = () => {
+                            const before = text.substring(0, wordStart + 1);
+                            const after = text.substring(cursorPos);
+                            messageInput.value = before + user.name + ' ' + after;
+                            mentionSuggestionsDiv.style.display = 'none';
+                            messageInput.focus();
+                        };
+                        mentionSuggestionsDiv.appendChild(item);
+                    });
+                }
+            }
+        }
+
+        messageInput.addEventListener('input', updateMentionSuggestions);
+        messageInput.addEventListener('keydown', (e) => {
+            if (mentionSuggestionsDiv.style.display === 'block' && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+                e.preventDefault(); // Evita o comportamento padrão do Enter/setas na textarea
+                const items = Array.from(mentionSuggestionsDiv.children);
+                if (items.length === 0) return;
+
+                let currentIndex = items.findIndex(item => item.classList.contains('selected'));
+                if (currentIndex === -1) currentIndex = -1; // No item selected initially
+
+                if (e.key === 'ArrowDown') {
+                    currentIndex = (currentIndex + 1) % items.length;
+                } else if (e.key === 'ArrowUp') {
+                    currentIndex = (currentIndex - 1 + items.length) % items.length;
+                } else if (e.key === 'Enter') {
+                    if (currentIndex !== -1) {
+                        items[currentIndex].click(); // Simula o clique no item selecionado
+                        return;
+                    }
+                }
+
+                items.forEach((item, index) => {
+                    if (index === currentIndex) {
+                        item.classList.add('selected');
+                        item.scrollIntoView({ block: 'nearest' });
+                    } else {
+                        item.classList.remove('selected');
+                    }
+                });
+            } else {
+                // Se o Enter for pressionado e não houver sugestões visíveis, o prompt será exibido normalmente
+            }
+        });
+        messageInput.addEventListener('blur', () => {
+            // Pequeno atraso para permitir que o clique na sugestão seja registrado
+            setTimeout(() => {
+                mentionSuggestionsDiv.style.display = 'none';
+            }, 100);
+        });
+
+        // Autenticação
+        loginBtn.addEventListener("click", async () => {
+            try {
+                await auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value);
+                showAlert("Login bem-sucedido!");
+            } catch (error) {
+                showAlert(`Erro de login: ${error.message}`, true);
+                console.error("Erro de login:", error);
+            }
+        });
+
+        registerBtn.addEventListener("click", async () => {
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(emailInput.value, passwordInput.value);
+                const user = userCredential.user;
+                showAlert("Registro bem-sucedido!");
+
+                // Se for um novo usuário, peça um nome de usuário
+                const username = await showUsernamePrompt();
+                if (username) {
+                    await namesRef.child(user.uid).set(username);
+                    showAlert("Nome de usuário salvo com sucesso!");
+                } else {
+                    showAlert("Nome de usuário não definido. Você pode configurá-lo mais tarde.", true);
+                }
+            } catch (error) {
+                showAlert(`Erro de registro: ${error.message}`, true);
+                console.error("Erro de registro:", error);
+            }
+        });
+
+        googleSignInBtn.addEventListener("click", async () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try {
+                const userCredential = await auth.signInWithPopup(provider);
+                const user = userCredential.user;
+                showAlert("Login com Google bem-sucedido!");
+
+                // Verifica se o usuário já tem um nome
+                const nameSnap = await namesRef.child(user.uid).once("value");
+                if (!nameSnap.exists() || !nameSnap.val()) {
+                    // Se não tiver nome, use o display name do Google ou peça um
+                    const defaultName = user.displayName || user.email.split('@')[0];
+                    const username = await showCustomPrompt("Escolha um nome de usuário:", "text", defaultName);
+                    if (username) {
+                        await namesRef.child(user.uid).set(username);
+                        showAlert("Nome de usuário salvo com sucesso!");
+                    } else {
+                        showAlert("Nome de usuário não definido. Você pode configurá-lo mais tarde.", true);
+                    }
+                }
+            } catch (error) {
+                showAlert(`Erro ao fazer login com Google: ${error.message}`, true);
+                console.error("Erro Google Sign-In:", error);
+            }
+        });
+
+        logoutBtn.addEventListener("click", async () => {
+            try {
+                if (auth.currentUser) {
+                    await onlineRef.child(auth.currentUser.uid).remove(); // Remove do online
+                }
+                await auth.signOut();
+                showAlert("Logout bem-sucedido!");
+            } catch (error) {
+                showAlert(`Erro ao fazer logout: ${error.message}`, true);
+                console.error("Erro de logout:", error);
+            }
+        });
+
+        deleteAccountBtn.addEventListener("click", async () => {
+            const user = auth.currentUser;
+            if (!user) {
+                showAlert("Nenhum usuário logado para apagar.", true);
+                return;
+            }
+
+            const confirm = await showCustomPrompt("Tem certeza que deseja apagar sua conta? Isso é irreversível!", "text", "sim");
+            if (confirm === "sim") {
+                try {
+                    // Apagar comentários do usuário
+                    await commentsRef.orderByChild("uid").equalTo(user.uid).once("value", snapshot => {
+                        snapshot.forEach(child => child.ref.remove());
+                    });
+                    // Apagar nome de usuário
+                    await namesRef.child(user.uid).remove();
+                    // Apagar status online
+                    await onlineRef.child(user.uid).remove();
+
+                    // Reautenticar antes de apagar a conta
+                    // (Necessário para operações sensíveis, dependendo do provedor)
+                    // Para email/senha:
+                    if (user.providerData[0].providerId === 'password') {
+                        const credential = firebase.auth.EmailAuthProvider.credential(user.email, passwordInput.value);
+                        await user.reauthenticateWithCredential(credential);
+                    }
+                    // Para Google:
+                    if (user.providerData[0].providerId === 'google.com') {
+                        const provider = new firebase.auth.GoogleAuthProvider();
+                        await user.reauthenticateWithPopup(provider);
+                    }
+
+                    await user.delete();
+                    showAlert("Conta apagada com sucesso.");
+                } catch (error) {
+                    showAlert(`Erro ao apagar conta: ${error.message}. Por favor, faça login novamente e tente de novo.`, true);
+                    console.error("Erro ao apagar conta:", error);
+                }
+            } else {
+                showAlert("Operação cancelada.", true);
+            }
+        });
+
+        sendCommentBtn.addEventListener("click", async () => {
+            const user = auth.currentUser;
+            if (!user) {
+                showAlert("Por favor, faça login para comentar.", true);
+                return;
+            }
+
+            const message = messageInput.value.trim();
+            if (!message) {
+                showAlert("A mensagem não pode estar vazia.", true);
+                return;
+            }
+
+            try {
+                const nameSnap = await namesRef.child(user.uid).once("value");
+                const name = nameSnap.val();
+
+                if (!name) {
+                    showAlert("Nome de usuário não encontrado. Por favor, defina um nome.", true);
+                    const newUsername = await showUsernamePrompt();
+                    if (newUsername) {
+                        await namesRef.child(user.uid).set(newUsername);
+                        showAlert("Nome de usuário salvo. Tente enviar o comentário novamente.");
+                    }
+                    return;
+                }
+
+                const newComment = {
+                    uid: user.uid,
+                    name: name,
+                    message: message,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    replyToId: replyToCommentId,
+                    replyToAuthor: replyToAuthorName
+                };
+
+                await commentsRef.push(newComment);
+                messageInput.value = "";
+                cancelReply(); // Limpa a caixa de resposta após enviar
+                showAlert("Comentário enviado!");
+            } catch (error) {
+                showAlert(`Erro ao enviar comentário: ${error.message}`, true);
+                console.error("Erro ao enviar comentário:", error);
+            }
+        });
+
+        // Monitorar estado de autenticação
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                statusDiv.textContent = `✅ Logado como: ${user.email}`;
+                authSection.style.display = "none";
+                commentInputSection.style.display = "block";
+
+                // Verificar e definir nome de usuário
+                const nameSnap = await namesRef.child(user.uid).once("value");
+                if (!nameSnap.exists() || !nameSnap.val()) {
+                    const username = await showUsernamePrompt();
+                    if (username) {
+                        await namesRef.child(user.uid).set(username);
+                        showAlert("Nome de usuário salvo com sucesso!");
+                    }
+                } else {
+                    statusDiv.textContent = `✅ Logado como: ${nameSnap.val()}`;
+                }
+
+                // Definir status online
+                onlineRef.child(user.uid).set(true);
+                // Remover status online ao desconectar
+                onlineRef.child(user.uid).onDisconnect().remove();
+
+                // Checar se o usuário está banido
+                const bannedSnap = await bannedRef.child(user.uid).once("value");
+                if (bannedSnap.exists() && bannedSnap.val() === true) {
+                    showAlert("Você foi banido e não pode comentar.", true);
+                    sendCommentBtn.disabled = true;
+                    messageInput.disabled = true;
+                } else {
+                    sendCommentBtn.disabled = false;
+                    messageInput.disabled = false;
+                }
+
+            } else {
+                statusDiv.textContent = "Por favor, faça login ou registre-se.";
+                authSection.style.display = "block";
+                commentInputSection.style.display = "none";
+                sendCommentBtn.disabled = false; // Reabilitar se deslogado
+                messageInput.disabled = false;
+            }
+        });
+
+        // Carregar e exibir comentários
+        commentsRef.on("value", async snapshot => {
+            commentsDiv.innerHTML = ""; // Limpa os comentários existentes para evitar duplicação!
+            const user = auth.currentUser;
+            const isAdmin = user && user.uid === ADMIN_UID;
+
+            const commentsArray = [];
+            snapshot.forEach(child => {
+                commentsArray.push({ key: child.key, ...child.val() });
+            });
+
+            commentsArray.sort((a, b) => a.timestamp - b.timestamp);
+
+            // Fetch all online users and their names ONCE per commentsRef update
+            const onlineUsersSnapshot = await onlineRef.once("value");
+            const onlineUserUids = [];
+            onlineUsersSnapshot.forEach(child => onlineUserUids.push(child.key));
+            const allUserNamesPromises = onlineUserUids.map(uid => namesRef.child(uid).once("value").then(snap => snap.val()));
+            const allOnlineUserNames = (await Promise.all(allUserNamesPromises)).filter(name => name); // Get all existing names
+
+
+            // Usando Promise.all para buscar comentários originais em paralelo para performance
+            const commentsWithReplyData = await Promise.all(commentsArray.map(async (c) => {
+                let replyToHtml = '';
+                if (c.replyToId && c.replyToAuthor) {
+                    const originalCommentSnap = await commentsRef.child(c.replyToId).once("value");
+                    if (originalCommentSnap.exists()) {
+                        const originalComment = originalCommentSnap.val();
+                        // Pega os primeiros 80 caracteres da mensagem original para o snippet
+                        const originalMessageSnippet = originalComment.message.substring(0, 80) + (originalComment.message.length > 80 ? '...' : '');
+                        replyToHtml = `
+                            <div class="comment-reply-block">
+                                <span class="reply-block-author">${originalComment.name}</span>
+                                <span class="reply-block-message">${originalMessageSnippet}</span>
+                            </div>
+                        `;
+                    } else {
+                        replyToHtml = `
+                            <div class="comment-reply-block comment-reply-deleted">
+                                <span class="reply-block-message">[Mensagem original apagada]</span>
+                            </div>
+                        `;
+                    }
+                }
+                return { ...c, replyToHtml: replyToHtml };
+            }));
+
+
+            for (const c of commentsWithReplyData) { // Percorre o novo array com replyHtml
+                const div = document.createElement("div");
+                div.className = "comment";
+
+                if (user && user.uid === c.uid) {
+                    div.classList.add("own");
+                }
+                if (c.uid === ADMIN_UID) {
+                    div.classList.add("admin");
+                }
+
+                const date = new Date(c.timestamp);
+                const dataFormatada = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+                // Aplica o parsing de markdown à mensagem
+                let messageContent = parseMarkdown(c.message);
+
+                // Agora, lida com as menções dentro da mensagem formatada.
+                // Itera sobre os nomes para substituir, começando com nomes mais longos para evitar correspondências parciais
+                allOnlineUserNames.sort((a, b) => b.length - a.length).forEach(name => {
+                    // Regex para encontrar @nomeUsuario. Garante que é um limite de palavra para o nome de usuário.
+                    const regex = new RegExp(`@${name}\\b`, 'g'); // \b para limite de palavra
+                    messageContent = messageContent.replace(regex, `<span class="mention">@${name}</span>`);
+                });
+
+                // Usa o replyToHtml pré-buscado e o messageContent recém-formatado
+                div.innerHTML = `
+                    <div class="comment-header">
+                        <span class="comment-author">${c.name}</span>
+                        <span class="comment-timestamp">(${dataFormatada})</span>
+                    </div>
+                    ${c.replyToHtml}
+                    <div class="comment-message">${messageContent}</div> `;
+
+                const actionsDiv = document.createElement("div");
+                actionsDiv.className = "comment-actions";
+
+                const replyBtn = document.createElement("button");
+                replyBtn.textContent = "Responder";
+                replyBtn.onclick = () => {
+                    startReply(c.key, c.name); // Usa c.key (ID do comentário) e c.name para resposta
+                };
+                actionsDiv.append(replyBtn);
+
+
+                if (user && user.uid === c.uid) {
+                    const editBtn = document.createElement("button");
+                    editBtn.textContent = "Editar";
+                    editBtn.onclick = async () => {
+                        const novoTexto = await showCustomPrompt("Edite sua mensagem:", "textarea", c.message);
+                        if (novoTexto !== null) {
+                            if (novoTexto.trim() !== "") {
+                                commentsRef.child(c.key).update({ message: novoTexto });
+                            } else {
+                                showAlert("Mensagem não pode ser vazia.", true);
+                            }
+                        }
+                    };
+
+                    const deleteOwnBtn = document.createElement("button");
+                    deleteOwnBtn.textContent = "Apagar Mensagem";
+                    deleteOwnBtn.onclick = async () => {
+                        const confirmDelete = await showCustomPrompt("Tem certeza que deseja apagar esta mensagem?", "text", "sim");
+                        if (confirmDelete === "sim") {
+                            commentsRef.child(c.key).remove();
+                            showAlert("Mensagem apagada.");
+                        } else {
+                            showAlert("Operação cancelada.", true);
+                        }
+                    };
+                    actionsDiv.append(editBtn, deleteOwnBtn);
+                }
+
+                if (isAdmin && c.uid !== ADMIN_UID) {
+                    const adminBox = document.createElement("div");
+                    adminBox.className = "admin-buttons";
+
+                    const del = document.createElement("button");
+                    del.textContent = "🗑️ Apagar";
+                    del.onclick = async () => {
+                        const confirmDel = await showCustomPrompt("Tem certeza que deseja apagar esta mensagem?", "text", "sim");
+                        if (confirmDel === "sim") {
+                            commentsRef.child(c.key).remove();
+                            showAlert("Mensagem apagada pelo admin.");
+                        } else {
+                            showAlert("Operação cancelada.", true);
+                        }
+                    };
+
+                    const ban = document.createElement("button");
+                    ban.textContent = "🚫 Banir Usuário";
+                    ban.onclick = async () => {
+                        const confirmBan = await showCustomPrompt(`Tem certeza que deseja banir ${c.name}? Isso também apagará os comentários dele.`, "text", "sim");
+                        if (confirmBan === "sim") {
+                            bannedRef.child(c.uid).set(true);
+                            await showCustomAlert(`${c.name} foi banido.`);
+                            await commentsRef.orderByChild("uid").equalTo(c.uid).once("value", snapshot => {
+                                snapshot.forEach(child => child.ref.remove());
+                            });
+                            onlineRef.child(c.uid).remove();
+                        } else {
+                            showAlert("Operação cancelada.", true);
+                        }
+                    };
+                    adminBox.append(del, ban);
+                    actionsDiv.appendChild(adminBox);
+                }
+
+                if (actionsDiv.children.length > 0) {
+                    div.appendChild(actionsDiv);
+                }
+
+                commentsDiv.appendChild(div);
+            }
+        });
+
+        onlineRef.on("value", snap => {
+            userCount.textContent = `👥 Usuários online: ${snap.numChildren()}`;
+        });
+    </script>
 </body>
 </html>
