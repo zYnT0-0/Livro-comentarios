@@ -210,7 +210,7 @@
       background: #f04747 !important; /* Discord red for errors */
     }
 
-    /* --- Reply Box Styling --- */
+    /* --- Reply Box Styling (for composing a reply) --- */
     #reply-box {
         background-color: var(--comment-bg);
         border-radius: 5px;
@@ -237,13 +237,39 @@
     #reply-box .cancel-reply-btn:hover {
         color: #cc3a3a;
     }
-    .comment-reply-to {
-        font-size: 0.85em;
-        color: #99aab5; /* Light grey for replied-to info */
-        margin-bottom: 5px;
+    /* --- Styles for displaying a sent reply (quote block) --- */
+    .comment-reply-block {
+        background-color: #40444b; /* Slightly darker than comment-bg */
+        border-left: 4px solid var(--accent);
+        padding: 8px 12px;
+        border-radius: 5px;
+        margin-bottom: 10px; /* Space between quote and current message */
+        font-size: 0.9em;
+        color: #dcdcdc;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        max-width: 100%; /* Ensure it fits within parent */
     }
-    .comment-reply-to strong {
-        color: var(--accent);
+    .comment-reply-block .reply-block-author {
+        font-weight: bold;
+        color: var(--accent); /* Same accent color for author */
+    }
+    .comment-reply-block .reply-block-message {
+        font-style: italic;
+        color: #b9bbbe; /* Lighter grey for the message snippet */
+        overflow: hidden;
+        white-space: nowrap; /* Keep snippet on one line */
+        text-overflow: ellipsis; /* Add ellipsis if text is too long */
+    }
+    .comment-reply-block.comment-reply-deleted {
+        background-color: #5d6067; /* Different color for deleted reply */
+        border-left-color: #f04747; /* Red border for deleted */
+        color: #f04747; /* Text color for deleted message */
+    }
+    .comment-reply-block.comment-reply-deleted .reply-block-message {
+        font-style: normal; /* No italics for deleted message text */
+        color: #f04747;
     }
   </style>
 </head>
@@ -599,8 +625,34 @@
 
     commentsArray.sort((a, b) => a.timestamp - b.timestamp);
 
-    for (const commentData of commentsArray) {
-      const c = commentData;
+    // Using Promise.all to fetch original comments in parallel for performance
+    const commentsWithReplyData = await Promise.all(commentsArray.map(async (c) => {
+        let replyToHtml = '';
+        if (c.replyToId && c.replyToAuthor) {
+            const originalCommentSnap = await commentsRef.child(c.replyToId).once("value");
+            if (originalCommentSnap.exists()) {
+                const originalComment = originalCommentSnap.val();
+                // Take first 80 characters of the original message for snippet
+                const originalMessageSnippet = originalComment.message.substring(0, 80) + (originalComment.message.length > 80 ? '...' : '');
+                replyToHtml = `
+                    <div class="comment-reply-block">
+                        <span class="reply-block-author">${originalComment.name}</span>
+                        <span class="reply-block-message">${originalMessageSnippet}</span>
+                    </div>
+                `;
+            } else {
+                replyToHtml = `
+                    <div class="comment-reply-block comment-reply-deleted">
+                        <span class="reply-block-message">[Mensagem original apagada]</span>
+                    </div>
+                `;
+            }
+        }
+        return { ...c, replyToHtml: replyToHtml };
+    }));
+
+
+    for (const c of commentsWithReplyData) { // Loop through the new array with replyHtml
       const div = document.createElement("div");
       div.className = "comment";
 
@@ -614,19 +666,13 @@
       const date = new Date(c.timestamp);
       const dataFormatada = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
-      let replyToHtml = '';
-      if (c.replyToId && c.replyToAuthor) {
-          replyToHtml = `<div class="comment-reply-to">Em resposta a <strong>${c.replyToAuthor}</strong></div>`;
-      }
-
-
+      // Use the pre-fetched replyToHtml
       div.innerHTML = `
         <div class="comment-header">
           <span class="comment-author">${c.name}</span>
           <span class="comment-timestamp">(${dataFormatada})</span>
         </div>
-        ${replyToHtml}
-        <div class="comment-message">${c.message}</div>
+        ${c.replyToHtml} <div class="comment-message">${c.message}</div>
       `;
 
       const actionsDiv = document.createElement("div");
@@ -635,7 +681,7 @@
       const replyBtn = document.createElement("button");
       replyBtn.textContent = "Responder";
       replyBtn.onclick = () => {
-          startReply(commentData.key, c.name);
+          startReply(c.key, c.name); // Use c.key (comment ID) and c.name for reply
       };
       actionsDiv.append(replyBtn);
 
@@ -647,7 +693,7 @@
           const novoTexto = await showCustomPrompt("Edite sua mensagem:", "textarea", c.message);
           if (novoTexto !== null) {
             if (novoTexto.trim() !== "") {
-              commentsRef.child(commentData.key).update({ message: novoTexto });
+              commentsRef.child(c.key).update({ message: novoTexto });
             } else {
               showAlert("Mensagem não pode ser vazia.", true);
             }
@@ -659,7 +705,7 @@
         deleteOwnBtn.onclick = async () => {
           const confirmDelete = await showCustomPrompt("Tem certeza que deseja apagar esta mensagem?", "text", "sim");
           if (confirmDelete === "sim") {
-            commentsRef.child(commentData.key).remove();
+            commentsRef.child(c.key).remove();
             showAlert("Mensagem apagada.");
           } else {
             showAlert("Operação cancelada.", true);
@@ -677,7 +723,7 @@
         del.onclick = async () => {
           const confirmDel = await showCustomPrompt("Tem certeza que deseja apagar esta mensagem?", "text", "sim");
           if (confirmDel === "sim") {
-            commentsRef.child(commentData.key).remove();
+            commentsRef.child(c.key).remove();
             showAlert("Mensagem apagada pelo admin.");
           } else {
             showAlert("Operação cancelada.", true);
@@ -717,4 +763,5 @@
 </script>
 </body>
 </html>
-        
+
+  
