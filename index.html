@@ -15,6 +15,8 @@
       --admin-bg: #5865f2; /* Admin comments também com o azul mais forte */
       --input-bg: #40444b;
       --button-hover: #4752c4; /* Ajuste para o hover do botão */
+      --danger-btn: #f04747; /* Vermelho para ações de perigo */
+      --danger-btn-hover: #cc3a3a;
     }
     * { box-sizing: border-box; }
     body {
@@ -138,10 +140,10 @@
       gap: 8px;
     }
     .admin-buttons button {
-      background-color: #f04747; /* Red for delete/ban */
+      background-color: var(--danger-btn); /* Red for delete/ban */
     }
     .admin-buttons button:hover {
-      background-color: #cc3a3a;
+      background-color: var(--danger-btn-hover);
     }
 
     /* Custom Modal/Alert Styling */
@@ -207,7 +209,7 @@
       margin-bottom: 15px; /* Spacing below alert */
     }
     .error-alert {
-      background: #f04747 !important; /* Discord red for errors */
+      background: var(--danger-btn) !important; /* Discord red for errors */
     }
 
     /* --- Reply Box Styling (for composing a reply) --- */
@@ -229,13 +231,13 @@
     #reply-box .cancel-reply-btn {
         background: none;
         border: none;
-        color: #f04747; /* Red X */
+        color: var(--danger-btn); /* Red X */
         font-size: 1.2em;
         cursor: pointer;
         padding: 0 5px;
     }
     #reply-box .cancel-reply-btn:hover {
-        color: #cc3a3a;
+        color: var(--danger-btn-hover);
     }
     /* --- Styles for displaying a sent reply (quote block) --- */
     .comment-reply-block {
@@ -264,12 +266,86 @@
     }
     .comment-reply-block.comment-reply-deleted {
         background-color: #5d6067; /* Different color for deleted reply */
-        border-left-color: #f04747; /* Red border for deleted */
-        color: #f04747; /* Text color for deleted message */
+        border-left-color: var(--danger-btn); /* Red border for deleted */
+        color: var(--danger-btn); /* Text color for deleted message */
     }
     .comment-reply-block.comment-reply-deleted .reply-block-message {
         font-style: normal; /* No italics for deleted message text */
-        color: #f04747;
+        color: var(--danger-btn);
+    }
+
+    /* --- NEW CSS FOR MARKDOWN --- */
+    .comment-message b, .comment-message strong {
+      font-weight: bold;
+    }
+    .comment-message i, .comment-message em {
+      font-style: italic;
+    }
+    .comment-message s, .comment-message del {
+      text-decoration: line-through;
+    }
+    .comment-message code {
+      background-color: #2b2d31; /* Discord code block color */
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    .comment-message pre {
+      background-color: #2b2d31;
+      padding: 8px 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-family: monospace;
+      margin-top: 5px;
+      margin-bottom: 5px;
+    }
+    .comment-message blockquote {
+      border-left: 4px solid #4f545c;
+      padding-left: 10px;
+      margin: 5px 0;
+      color: #c4c4c4;
+    }
+
+    /* --- NEW CSS FOR MENTIONS --- */
+    .mention {
+      color: var(--accent); /* Discord blue for mentions */
+      background-color: rgba(88, 101, 242, 0.2); /* Light blue background */
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-weight: bold;
+      cursor: pointer; /* Indicate it's clickable, even if no action */
+    }
+
+    /* --- NEW CSS FOR MENTION SUGGESTIONS --- */
+    #mention-suggestions {
+      display: none;
+      position: absolute;
+      z-index: 100;
+      background-color: #36393f; /* Dark background */
+      border: 1px solid #2f3136;
+      border-radius: 5px;
+      max-height: 200px;
+      overflow-y: auto;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      list-style: none; /* Ensure no list bullets */
+      padding: 0;
+      margin: 0;
+      text-align: left; /* Align text left */
+    }
+    #mention-suggestions ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    #mention-suggestions ul li {
+      padding: 8px 12px;
+      cursor: pointer;
+      color: var(--fg);
+    }
+    #mention-suggestions ul li:hover,
+    #mention-suggestions ul li.selected {
+      background-color: var(--accent);
+      color: white;
     }
   </style>
 </head>
@@ -294,6 +370,10 @@
         <button type="button" class="cancel-reply-btn">X</button>
     </div>
     <textarea id="message" placeholder="Seu comentário" required rows="3"></textarea>
+
+    <div id="mention-suggestions">
+      <ul></ul>
+    </div>
     <button type="submit">Enviar</button>
   </form>
   <div id="comments"></div>
@@ -359,6 +439,12 @@
   const replyBox = document.getElementById("reply-box");
   const replyMessageSpan = replyBox.querySelector(".reply-message");
   const cancelReplyBtn = replyBox.querySelector(".cancel-reply-btn");
+
+  // NEW GLOBALS for mention system
+  const mentionSuggestions = document.getElementById("mention-suggestions");
+  const mentionSuggestionsList = mentionSuggestions.querySelector("ul");
+  let currentSuggestions = [];
+  let selectedSuggestionIndex = -1;
 
   let replyToCommentId = null;
   let replyToAuthorName = null;
@@ -433,6 +519,44 @@
     });
   }
 
+  // NEW FUNCTION: parseMarkdown
+  function parseMarkdown(text) {
+    // Escapes HTML to prevent XSS before parsing markdown
+    let escapedText = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    // Inline code: `code`
+    escapedText = escapedText.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Code blocks: ```code```
+    escapedText = escapedText.replace(/```([\s\S]+?)```/g, '<pre>$1</pre>');
+
+    // Bold Italic: ***text*** or ___text___
+    escapedText = escapedText.replace(/(\*\*\*|___)(.*?)\1/g, '<strong><em>$2</em></strong>');
+    // Bold: **text** or __text__
+    escapedText = escapedText.replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>');
+    // Italic: *text* or _text_
+    escapedText = escapedText.replace(/(\*|_)(.*?)\1/g, '<em>$2</em>');
+    // Strikethrough: ~text~
+    escapedText = escapedText.replace(/~([^~]+)~/g, '<s>$1</s>');
+    // Blockquote: > text
+    // Handles multiple lines starting with >
+    escapedText = escapedText.replace(/^(>\s*.*(?:\n(?=>\s*).*)*)/gm, '<blockquote>$1</blockquote>');
+    // Remove the leading `>` from inside blockquote content for cleaner display
+    escapedText = escapedText.replace(/<blockquote>\s*>\s*/g, '<blockquote>'); // Fix for the first line
+    escapedText = escapedText.replace(/\n>\s*/g, '\n'); // Fix for subsequent lines
+
+    // Newlines to <br> for display, but only outside of <pre> tags
+    // This is a simplified approach. A full Markdown parser would be more robust.
+    escapedText = escapedText.replace(/\n(?!<pre>|<\/pre>)/g, '<br>');
+
+    return escapedText;
+  }
+
   // New functions for reply
   function startReply(commentId, authorName) {
       replyToCommentId = commentId;
@@ -451,6 +575,122 @@
 
   // Event listener for cancel reply button
   cancelReplyBtn.addEventListener('click', cancelReply);
+
+  // NEW FUNCTIONS FOR MENTION AUTOCOMPLETE
+  async function updateMentionSuggestions() {
+    const text = messageInput.value;
+    const cursorPosition = messageInput.selectionStart;
+    const wordStart = text.lastIndexOf('@', cursorPosition - 1);
+
+    if (wordStart !== -1 && (wordStart === 0 || /\s/.test(text[wordStart - 1]))) {
+      const mentionQuery = text.substring(wordStart + 1, cursorPosition).toLowerCase();
+
+           // Fetch all online users and their names
+      const onlineUsersSnapshot = await onlineRef.once("value");
+      const onlineUserUids = [];
+      onlineUsersSnapshot.forEach(child => onlineUserUids.push(child.key));
+
+      const allUserNamesPromises = onlineUserUids.map(uid => namesRef.child(uid).once("value").then(snap => ({uid, name: snap.val()})));
+      const allUserNames = (await Promise.all(allUserNamesPromises)).filter(u => u.name);
+
+      currentSuggestions = allUserNames.filter(user => user.name.toLowerCase().startsWith(mentionQuery));
+
+      renderMentionSuggestions();
+      if (currentSuggestions.length > 0) {
+        mentionSuggestions.style.display = 'block';
+        // Position the suggestion box
+        const rect = messageInput.getBoundingClientRect();
+        mentionSuggestions.style.top = `${rect.bottom + window.scrollY + 5}px`;
+        mentionSuggestions.style.left = `${rect.left + window.scrollX}px`;
+        mentionSuggestions.style.minWidth = `${rect.width}px`; // Match input width
+      } else {
+        mentionSuggestions.style.display = 'none';
+      }
+    } else {
+      mentionSuggestions.style.display = 'none';
+      selectedSuggestionIndex = -1; // Reset selection when not typing a mention
+    }
+  }
+
+  function renderMentionSuggestions() {
+    mentionSuggestionsList.innerHTML = '';
+    if (currentSuggestions.length === 0) {
+      mentionSuggestions.style.display = 'none';
+      return;
+    }
+
+    currentSuggestions.forEach((user, index) => {
+      const li = document.createElement('li');
+      li.textContent = `@${user.name}`;
+      li.dataset.uid = user.uid; // Store UID if needed for more complex logic later
+      li.dataset.name = user.name;
+      if (index === selectedSuggestionIndex) {
+        li.classList.add('selected');
+      }
+      li.addEventListener('click', () => selectMention(user.name));
+      mentionSuggestionsList.appendChild(li);
+    });
+  }
+
+  function selectMention(selectedName) {
+    const text = messageInput.value;
+    const cursorPosition = messageInput.selectionStart;
+    const wordStart = text.lastIndexOf('@', cursorPosition - 1);
+
+    if (wordStart !== -1) {
+      const before = text.substring(0, wordStart);
+      const after = text.substring(cursorPosition);
+      messageInput.value = `${before}@${selectedName} ${after}`;
+      // Position cursor after the inserted name
+      messageInput.selectionStart = messageInput.selectionEnd = before.length + selectedName.length + 2;
+      mentionSuggestions.style.display = 'none';
+      selectedSuggestionIndex = -1; // Reset selection
+    }
+  }
+
+  // Event Listeners for messageInput for mentions
+  messageInput.addEventListener('input', updateMentionSuggestions);
+
+  messageInput.addEventListener('keydown', (e) => {
+    if (mentionSuggestions.style.display === 'block' && currentSuggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedSuggestionIndex = (selectedSuggestionIndex + 1) % currentSuggestions.length;
+        renderMentionSuggestions();
+        mentionSuggestionsList.children[selectedSuggestionIndex].scrollIntoView({ block: "nearest" });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedSuggestionIndex = (selectedSuggestionIndex - 1 + currentSuggestions.length) % currentSuggestions.length;
+        renderMentionSuggestions();
+        mentionSuggestionsList.children[selectedSuggestionIndex].scrollIntoView({ block: "nearest" });
+      } else if (e.key === 'Enter') {
+        e.preventDefault(); // Prevent default form submission
+        if (selectedSuggestionIndex !== -1) {
+          selectMention(currentSuggestions[selectedSuggestionIndex].name);
+          selectedSuggestionIndex = -1; // Reset selection
+        } else {
+          // If no suggestion is explicitly selected, allow normal enter to submit
+          form.dispatchEvent(new Event('submit')); // Trigger form submission
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        mentionSuggestions.style.display = 'none';
+        selectedSuggestionIndex = -1;
+      }
+    } else if (e.key === 'Enter' && !e.shiftKey) { // Allow Shift+Enter for new line when no suggestions
+      e.preventDefault();
+      form.dispatchEvent(new Event('submit'));
+    }
+  });
+
+  // Hide suggestions if clicking outside
+  document.addEventListener('click', (e) => {
+    if (!messageInput.contains(e.target) && !mentionSuggestions.contains(e.target)) {
+      mentionSuggestions.style.display = 'none';
+      selectedSuggestionIndex = -1;
+    }
+  });
+
 
   // Troca botão de registro/login
   loginBtn.textContent = "Registrar";
@@ -625,6 +865,14 @@
 
     commentsArray.sort((a, b) => a.timestamp - b.timestamp);
 
+    // Fetch all online users and their names ONCE per commentsRef update
+    const onlineUsersSnapshot = await onlineRef.once("value");
+    const onlineUserUids = [];
+    onlineUsersSnapshot.forEach(child => onlineUserUids.push(child.key));
+    const allUserNamesPromises = onlineUserUids.map(uid => namesRef.child(uid).once("value").then(snap => snap.val()));
+    const allOnlineUserNames = (await Promise.all(allUserNamesPromises)).filter(name => name); // Get all existing names
+
+
     // Using Promise.all to fetch original comments in parallel for performance
     const commentsWithReplyData = await Promise.all(commentsArray.map(async (c) => {
         let replyToHtml = '';
@@ -666,14 +914,25 @@
       const date = new Date(c.timestamp);
       const dataFormatada = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
-      // Use the pre-fetched replyToHtml
+      // Apply markdown parsing to the message
+      let messageContent = parseMarkdown(c.message);
+
+      // Now, handle mentions within the formatted message.
+      // Iterate over names to replace, starting with longer names to avoid partial matches
+      allOnlineUserNames.sort((a, b) => b.length - a.length).forEach(name => {
+          // Regex to find @username. Ensure it's a word boundary for the username.
+          const regex = new RegExp(`@${name}\\b`, 'g'); // \b for word boundary
+          messageContent = messageContent.replace(regex, `<span class="mention">@${name}</span>`);
+      });
+
+      // Use the pre-fetched replyToHtml and the newly formatted messageContent
       div.innerHTML = `
         <div class="comment-header">
           <span class="comment-author">${c.name}</span>
           <span class="comment-timestamp">(${dataFormatada})</span>
         </div>
-        ${c.replyToHtml} <div class="comment-message">${c.message}</div>
-      `;
+        ${c.replyToHtml}
+        <div class="comment-message">${messageContent}</div> `;
 
       const actionsDiv = document.createElement("div");
       actionsDiv.className = "comment-actions";
@@ -763,5 +1022,3 @@
 </script>
 </body>
 </html>
-
-  
