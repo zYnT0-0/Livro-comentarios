@@ -210,6 +210,41 @@
       background: #f04747 !important; /* Discord red for errors */
     }
 
+    /* --- Reply Box Styling --- */
+    #reply-box {
+        background-color: var(--comment-bg);
+        border-radius: 5px;
+        padding: 8px 12px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9em;
+        color: #b9bbbe;
+        border-left: 3px solid var(--accent); /* Indicate it's a reply context */
+    }
+    #reply-box .reply-message {
+        flex-grow: 1;
+    }
+    #reply-box .cancel-reply-btn {
+        background: none;
+        border: none;
+        color: #f04747; /* Red X */
+        font-size: 1.2em;
+        cursor: pointer;
+        padding: 0 5px;
+    }
+    #reply-box .cancel-reply-btn:hover {
+        color: #cc3a3a;
+    }
+    .comment-reply-to {
+        font-size: 0.85em;
+        color: #99aab5; /* Light grey for replied-to info */
+        margin-bottom: 5px;
+    }
+    .comment-reply-to strong {
+        color: var(--accent);
+    }
   </style>
 </head>
 <body>
@@ -226,14 +261,12 @@
     <button id="delete-account" style="display:none;">Apagar minha conta</button>
   </div>
 
-  
-  <div id="reply-banner" style="display:none; background: #40444b; color: #fff; padding: 8px; border-radius: 5px; margin-bottom: 10px;">
-    Respondendo <strong id="reply-to-name"></strong>: <em id="reply-to-message"></em>
-    <button onclick="cancelReply()" style="float:right; background:red; color:white; border:none; padding:2px 8px; border-radius:3px;">X</button>
-  </div>
-
   <form id="comment-form">
     <input type="text" id="name" placeholder="Seu nome (só se não estiver logado)" style="display:none;" />
+    <div id="reply-box" style="display:none;">
+        <span class="reply-message"></span>
+        <button type="button" class="cancel-reply-btn">X</button>
+    </div>
     <textarea id="message" placeholder="Seu comentário" required rows="3"></textarea>
     <button type="submit">Enviar</button>
   </form>
@@ -295,6 +328,14 @@
   const modalTextarea = document.getElementById("modal-textarea");
   const modalConfirmBtn = document.getElementById("modal-confirm-btn");
   const modalCancelBtn = document.getElementById("modal-cancel-btn");
+
+  // Reply functionality elements
+  const replyBox = document.getElementById("reply-box");
+  const replyMessageSpan = replyBox.querySelector(".reply-message");
+  const cancelReplyBtn = replyBox.querySelector(".cancel-reply-btn");
+
+  let replyToCommentId = null;
+  let replyToAuthorName = null;
 
   function showAlert(msg, isError = false) {
     alertBox.textContent = msg;
@@ -361,28 +402,34 @@
         modalConfirmBtn.removeEventListener('click', confirmHandler);
         modalConfirmBtn.textContent = 'Confirmar'; // Reset button text
         resolve();
-      }
-
-
-  function cancelReply() {
-    replyTo = null;
-    document.getElementById("reply-banner").style.display = "none";
-  }
-
-
-;
+      };
       modalConfirmBtn.addEventListener('click', confirmHandler);
     });
   }
 
+  // New functions for reply
+  function startReply(commentId, authorName) {
+      replyToCommentId = commentId;
+      replyToAuthorName = authorName;
+      replyMessageSpan.textContent = `Respondendo a ${authorName}`;
+      replyBox.style.display = 'flex';
+      messageInput.focus();
+  }
 
-  let replyTo = null;
+  function cancelReply() {
+      replyToCommentId = null;
+      replyToAuthorName = null;
+      replyBox.style.display = 'none';
+      replyMessageSpan.textContent = '';
+  }
+
+  // Event listener for cancel reply button
+  cancelReplyBtn.addEventListener('click', cancelReply);
 
   // Troca botão de registro/login
   loginBtn.textContent = "Registrar";
   loginBtn.addEventListener("click", () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    // CORREÇÃO AQUI: Usar setCustomParameters para forçar a seleção de conta
     provider.setCustomParameters({ prompt: 'select_account' });
     auth.signInWithPopup(provider).catch(error => {
       showAlert(`Erro ao fazer login: ${error.message}`, true);
@@ -394,8 +441,7 @@
     if (user) {
       onlineRef.child(user.uid).remove(); // Remove o status online
       auth.signOut().then(() => {
-        // Redireciona ou recarrega a página para limpar o estado
-        location.reload();
+        // REMOVIDO: location.reload(); para dinamismo
       }).catch(error => {
         showAlert(`Erro ao sair: ${error.message}`, true);
       });
@@ -421,32 +467,20 @@
     }
 
     try {
-        // --- ETAPA DE REAUTENTICAÇÃO ---
-        // Essencial para operações sensíveis como user.delete()
         const provider = new firebase.auth.GoogleAuthProvider();
-        // Também usar setCustomParameters aqui para a reautenticação
         provider.setCustomParameters({ prompt: 'select_account' });
-        await user.reauthenticateWithPopup(provider); // Isso abrirá um pop-up para o usuário logar novamente
+        await user.reauthenticateWithPopup(provider);
 
-        // --- EXCLUIR DADOS DO USUÁRIO NO DATABASE ---
-        // Acessa e remove todos os comentários do usuário
         await commentsRef.orderByChild("uid").equalTo(user.uid).once("value", snapshot => {
             snapshot.forEach(child => child.ref.remove());
         });
-
-        // Remove o nome de usuário registrado
         await namesRef.child(user.uid).remove();
-
-        // Remove o status online
         await onlineRef.child(user.uid).remove();
 
-        // --- APAGAR A CONTA DO FIREBASE AUTHENTICATION ---
         await user.delete();
 
         showAlert("Conta apagada com sucesso. Você foi desconectado.");
-        // Redirecionar ou recarregar a página para garantir que não haja rastros da sessão
-        location.reload();
-
+        // REMOVIDO: location.reload(); para dinamismo
     } catch (error) {
         console.error("Erro ao apagar conta:", error);
         if (error.code === 'auth/requires-recent-login') {
@@ -488,7 +522,6 @@
             auth.signOut(); // Se o usuário cancelar a escolha do nome, desloga
             return;
           }
-          // Verifica se o nome já está em uso por outro UID
           const exists = await namesRef.orderByValue().equalTo(tryName).once("value");
           if (exists.exists()) {
             await showCustomAlert("Nome já está em uso. Por favor, escolha outro.");
@@ -518,7 +551,7 @@
   form.addEventListener("submit", async e => {
     e.preventDefault();
     const user = auth.currentUser;
-    let userName = nameInput.value.trim(); // Get name from input if not logged in
+    let userName = nameInput.value.trim();
 
     if (!user && !userName) {
       showAlert("Por favor, forneça seu nome ou faça login para comentar.", true);
@@ -527,23 +560,28 @@
 
     if (user) {
       const nickSnap = await namesRef.child(user.uid).once("value");
-      userName = nickSnap.exists() ? nickSnap.val() : "Anônimo"; // Use registered name if logged in
+      userName = nickSnap.exists() ? nickSnap.val() : "Anônimo";
     }
-
 
     const text = messageInput.value.trim();
     if (!text) return;
 
+    const commentData = {
+      uid: user ? user.uid : null,
+      name: userName,
+      message: text,
+      timestamp: firebase.database.ServerValue.TIMESTAMP
+    };
+
+    if (replyToCommentId && replyToAuthorName) {
+        commentData.replyToId = replyToCommentId;
+        commentData.replyToAuthor = replyToAuthorName;
+    }
+
     try {
-      await commentsRef.push({
-        replyTo: replyTo,
-    
-        uid: user ? user.uid : null, // Store UID if logged in
-        name: userName,
-        message: text,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-      });
-      messageInput.value = ""; replyTo = null; cancelReply();
+      await commentsRef.push(commentData);
+      messageInput.value = "";
+      cancelReply(); // Limpa o modo de resposta após enviar
     } catch (error) {
       showAlert(`Erro ao enviar comentário: ${error.message}`, true);
     }
@@ -559,7 +597,6 @@
       commentsArray.push({ key: child.key, ...child.val() });
     });
 
-    // Display comments in chronological order (oldest first, like a chat)
     commentsArray.sort((a, b) => a.timestamp - b.timestamp);
 
     for (const commentData of commentsArray) {
@@ -571,29 +608,44 @@
         div.classList.add("own");
       }
       if (c.uid === ADMIN_UID) {
-        div.classList.add("admin"); // Add admin class for specific styling
+        div.classList.add("admin");
       }
 
       const date = new Date(c.timestamp);
       const dataFormatada = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+      let replyToHtml = '';
+      if (c.replyToId && c.replyToAuthor) {
+          replyToHtml = `<div class="comment-reply-to">Em resposta a <strong>${c.replyToAuthor}</strong></div>`;
+      }
+
 
       div.innerHTML = `
         <div class="comment-header">
           <span class="comment-author">${c.name}</span>
           <span class="comment-timestamp">(${dataFormatada})</span>
         </div>
+        ${replyToHtml}
         <div class="comment-message">${c.message}</div>
       `;
 
       const actionsDiv = document.createElement("div");
       actionsDiv.className = "comment-actions";
 
+      const replyBtn = document.createElement("button");
+      replyBtn.textContent = "Responder";
+      replyBtn.onclick = () => {
+          startReply(commentData.key, c.name);
+      };
+      actionsDiv.append(replyBtn);
+
+
       if (user && user.uid === c.uid) {
         const editBtn = document.createElement("button");
         editBtn.textContent = "Editar";
         editBtn.onclick = async () => {
           const novoTexto = await showCustomPrompt("Edite sua mensagem:", "textarea", c.message);
-          if (novoTexto !== null) { // User didn't cancel
+          if (novoTexto !== null) {
             if (novoTexto.trim() !== "") {
               commentsRef.child(commentData.key).update({ message: novoTexto });
             } else {
@@ -616,7 +668,7 @@
         actionsDiv.append(editBtn, deleteOwnBtn);
       }
 
-      if (isAdmin && c.uid !== ADMIN_UID) { // Admin pode apagar/banir outros usuários, mas não a si mesmo.
+      if (isAdmin && c.uid !== ADMIN_UID) {
         const adminBox = document.createElement("div");
         adminBox.className = "admin-buttons";
 
@@ -637,14 +689,12 @@
         ban.onclick = async () => {
           const confirmBan = await showCustomPrompt(`Tem certeza que deseja banir ${c.name}? Isso também apagará os comentários dele.`, "text", "sim");
           if (confirmBan === "sim") {
-            bannedRef.child(c.uid).set(true); // Adiciona o UID à lista de banidos
+            bannedRef.child(c.uid).set(true);
             await showCustomAlert(`${c.name} foi banido.`);
-            // Apaga todos os comentários do usuário banido
             await commentsRef.orderByChild("uid").equalTo(c.uid).once("value", snapshot => {
               snapshot.forEach(child => child.ref.remove());
             });
-            // Tenta deslogar o usuário banido se ele estiver online
-            onlineRef.child(c.uid).remove(); // Remove o status online do banido
+            onlineRef.child(c.uid).remove();
           } else {
             showAlert("Operação cancelada.", true);
           }
@@ -653,47 +703,18 @@
         actionsDiv.appendChild(adminBox);
       }
 
-      
-        const replyBtn = document.createElement("button");
-        replyBtn.textContent = "Responder";
-        replyBtn.onclick = () => {
-          replyTo = { name: c.name, message: c.message };
-          document.getElementById("reply-to-name").textContent = c.name;
-          document.getElementById("reply-to-message").textContent = c.message;
-          document.getElementById("reply-banner").style.display = "block";
-        };
-        actionsDiv.prepend(replyBtn);
-
       if (actionsDiv.children.length > 0) {
         div.appendChild(actionsDiv);
       }
 
-      
-      if (c.replyTo && c.replyTo.name && c.replyTo.message) {
-        const replyBlock = document.createElement("div");
-        replyBlock.style.background = "#2f3136";
-        replyBlock.style.borderLeft = "3px solid var(--accent)";
-        replyBlock.style.padding = "5px 10px";
-        replyBlock.style.marginBottom = "5px";
-        replyBlock.innerHTML = `<strong>Em resposta a ${c.replyTo.name}</strong><br><em>${c.replyTo.message}</em>`;
-        div.insertBefore(replyBlock, div.children[1]); // insere antes da .comment-message
-      }
-
-      commentsDiv.appendChild(div); // Append to show chronological order
+      commentsDiv.appendChild(div);
     }
   });
 
   onlineRef.on("value", snap => {
     userCount.textContent = `👥 Usuários online: ${snap.numChildren()}`;
   });
-
-  function cancelReply() {
-  const replyInfo = document.getElementById("reply-info");
-  replyInfo.style.display = "none";
-  replyInfo.dataset.replyTo = "";
-  replyInfo.dataset.replyMessage = "";
-  }
-  
 </script>
 </body>
 </html>
+        
