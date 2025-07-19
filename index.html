@@ -11,7 +11,6 @@
       background: #f4f4f4;
       padding: 20px;
     }
-
     .container {
       max-width: 600px;
       margin: auto;
@@ -20,27 +19,25 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-
     h2 {
       text-align: center;
     }
-
-    #comment-form {
+    #comment-form, #alert-box {
       display: flex;
       flex-direction: column;
       gap: 10px;
       margin-top: 20px;
     }
-
     #comment-form input,
     #comment-form textarea {
       padding: 10px;
       border: 1px solid #ccc;
       border-radius: 5px;
     }
-
     #comment-form button,
-    #login-btn {
+    #login-btn,
+    #logout-btn,
+    #delete-account {
       padding: 10px;
       background: #007bff;
       border: none;
@@ -48,11 +45,6 @@
       border-radius: 5px;
       cursor: pointer;
     }
-
-    #comments {
-      margin-top: 20px;
-    }
-
     .comment {
       background: #f9f9f9;
       border: 1px solid #ddd;
@@ -60,184 +52,218 @@
       margin-bottom: 10px;
       border-radius: 6px;
     }
-
     .timestamp {
       font-size: 0.8em;
       color: #666;
       display: block;
       margin-top: 5px;
     }
-
+    .admin-buttons {
+      margin-top: 5px;
+    }
     #alert-box {
-      background: #fff3cd;
-      color: #856404;
-      border: 1px solid #ffeeba;
+      display: none;
+      background: #dff0d8;
+      color: #3c763d;
+      border: 1px solid #d6e9c6;
       padding: 10px;
       border-radius: 5px;
-      margin: 10px 0;
       text-align: center;
-      display: none;
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h2>Comentários</h2>
+<div class="container">
+  <h2>Comentários</h2>
 
-    <div id="alert-box"></div>
+  <div id="alert-box"></div>
 
-    <button id="login-btn">Entrar com Google</button>
-    <p id="user-info"></p>
+  <button id="login-btn">Registrar</button>
+  <button id="logout-btn" style="display:none;">Sair</button>
+  <button id="delete-account" style="display:none;">Apagar minha conta</button>
 
-    <form id="comment-form">
-      <input type="text" id="name" placeholder="Seu nome (caso não esteja logado)" />
-      <textarea id="message" placeholder="Seu comentário" required></textarea>
-      <button type="submit">Enviar</button>
-    </form>
+  <p id="user-info"></p>
+  <p id="user-count"></p>
 
-    <div id="comments"></div>
-  </div>
+  <form id="comment-form">
+    <input type="text" id="name" placeholder="Seu nome (só se não estiver logado)" />
+    <textarea id="message" placeholder="Seu comentário" required></textarea>
+    <button type="submit">Enviar</button>
+  </form>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <div id="comments"></div>
+</div>
 
-  <script>
-    if (
-      navigator.userAgent.includes("FBAN") ||
-      navigator.userAgent.includes("FBAV") ||
-      navigator.userAgent.includes("Instagram") ||
-      navigator.userAgent.includes("TikTok")
-    ) {
-      alert("⚠️ Para funcionar corretamente, abra este site em um navegador como Chrome, Firefox ou Safari.");
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",
+    authDomain: "comentarios-livro.firebaseapp.com",
+    databaseURL: "https://comentarios-livro-default-rtdb.firebaseio.com",
+    projectId: "comentarios-livro",
+    storageBucket: "comentarios-livro.appspot.com",
+    messagingSenderId: "702096545512",
+    appId: "1:702096545512:web:f7f305fe579d246c41b5d"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const auth = firebase.auth();
+  const commentsRef = db.ref("comentarios");
+  const namesRef = db.ref("nomesUsados");
+  const onlineRef = db.ref("logados");
+  const bannedRef = db.ref("banidos");
+  const loginBtn = document.getElementById("login-btn");
+  const logoutBtn = document.getElementById("logout-btn");
+  const deleteBtn = document.getElementById("delete-account");
+  const userInfo = document.getElementById("user-info");
+  const userCount = document.getElementById("user-count");
+  const form = document.getElementById("comment-form");
+  const nameInput = document.getElementById("name");
+  const messageInput = document.getElementById("message");
+  const commentsDiv = document.getElementById("comments");
+  const alertBox = document.getElementById("alert-box");
+  const ADMIN_UID = "RTJkscPxu9MjMFL4RZSaILntfM13";
+
+  function showAlert(msg) {
+    alertBox.textContent = msg;
+    alertBox.style.display = "block";
+    setTimeout(() => alertBox.style.display = "none", 3000);
+  }
+
+  loginBtn.addEventListener("click", () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+  });
+
+  logoutBtn.addEventListener("click", () => {
+    const user = auth.currentUser;
+    if (user) {
+      onlineRef.child(user.uid).remove();
+      auth.signOut();
+      location.reload();
     }
+  });
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",
-      authDomain: "comentarios-livro.firebaseapp.com",
-      databaseURL: "https://comentarios-livro-default-rtdb.firebaseio.com",
-      projectId: "comentarios-livro",
-      storageBucket: "comentarios-livro.appspot.com",
-      messagingSenderId: "702096545512",
-      appId: "1:702096545512:web:f7f305fe579d246c41b5d"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
-    const commentsRef = db.ref("comentarios");
-
-    const loginBtn = document.getElementById("login-btn");
-    const userInfo = document.getElementById("user-info");
-    const form = document.getElementById("comment-form");
-    const nameInput = document.getElementById("name");
-    const messageInput = document.getElementById("message");
-    const commentsDiv = document.getElementById("comments");
-    const alertBox = document.getElementById("alert-box");
-
-    let userNome = "";
-
-    function showAlert(msg) {
-      alertBox.textContent = msg;
-      alertBox.style.display = "block";
-      setTimeout(() => {
-        alertBox.style.display = "none";
-      }, 4000);
+  deleteBtn.addEventListener("click", async () => {
+    const user = auth.currentUser;
+    if (user) {
+      await commentsRef.orderByChild("uid").equalTo(user.uid).once("value", snapshot => {
+        snapshot.forEach(child => child.ref.remove());
+      });
+      await namesRef.child(user.uid).remove();
+      await onlineRef.child(user.uid).remove();
+      await user.delete();
+      showAlert("Conta apagada com sucesso.");
+      location.reload();
     }
+  });
 
-    loginBtn.addEventListener("click", () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithRedirect(provider);
-    });
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "inline-block";
+      deleteBtn.style.display = "inline-block";
 
-    auth.onAuthStateChanged(async user => {
-      if (user) {
-        const uid = user.uid;
-        const nomeRef = db.ref("nomesPorUID/" + uid);
-        const snapshot = await nomeRef.once("value");
+      const banSnapshot = await bannedRef.child(user.uid).once("value");
+      if (banSnapshot.exists()) {
+        alert("Você foi banido deste site.");
+        auth.signOut();
+        return;
+      }
 
-        if (snapshot.exists()) {
-          userNome = snapshot.val();
-          nameInput.style.display = "none";
-          userInfo.textContent = `Logado como: ${userNome}`;
-          loginBtn.style.display = "none";
-        } else {
-          nameInput.style.display = "block";
-          userInfo.textContent = `Conta detectada: ${user.email}`;
-          loginBtn.style.display = "none";
-          showAlert("Escolha um nome para usar nos comentários.");
+      const nameSnap = await namesRef.child(user.uid).once("value");
+      let nomeFinal;
+
+      if (!nameSnap.exists()) {
+        const nome = prompt("Escolha seu nome de usuário:");
+        if (!nome || nome.trim() === "") return auth.signOut();
+        const checkName = await namesRef.orderByValue().equalTo(nome).once("value");
+        if (checkName.exists()) {
+          alert("Esse nome já está em uso.");
+          auth.signOut();
+          return;
         }
+        await namesRef.child(user.uid).set(nome);
+        nomeFinal = nome;
       } else {
-        loginBtn.disabled = false;
-        loginBtn.style.display = "block";
-        userInfo.textContent = "";
-        nameInput.style.display = "block";
-      }
-    });
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const user = auth.currentUser;
-      const inputName = nameInput.value.trim();
-      const message = messageInput.value.trim();
-      let nomeFinal = inputName || userNome;
-
-      if (!nomeFinal || !message) {
-        return showAlert("Preencha todos os campos.");
+        nomeFinal = nameSnap.val();
       }
 
-      if (user && !userNome) {
-        const uid = user.uid;
-        const nomeCheck = await db.ref("nomesUsados/" + nomeFinal).once("value");
-        if (nomeCheck.exists()) {
-          return showAlert("Nome já está sendo usado por outro usuário.");
-        }
+      userInfo.textContent = `Logado como: ${nomeFinal}`;
+      nameInput.style.display = "none";
+      onlineRef.child(user.uid).set(true);
+      onlineRef.child(user.uid).onDisconnect().remove();
+    }
+  });
 
-        await db.ref("nomesPorUID/" + uid).set(nomeFinal);
-        await db.ref("nomesUsados/" + nomeFinal).set(uid);
-        userNome = nomeFinal;
-        nameInput.style.display = "none";
-        userInfo.textContent = `Logado como: ${userNome}`;
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const user = auth.currentUser;
+    if (!user) return alert("Você precisa estar logado.");
+
+    const message = messageInput.value.trim();
+    if (!message) return alert("Mensagem vazia.");
+
+    const nameSnap = await namesRef.child(user.uid).once("value");
+    const nome = nameSnap.exists() ? nameSnap.val() : "";
+
+    await commentsRef.push({
+      uid: user.uid,
+      name: nome,
+      message,
+      timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+
+    messageInput.value = "";
+  });
+
+  commentsRef.on("value", async snapshot => {
+    commentsDiv.innerHTML = "";
+    const user = auth.currentUser;
+    const isAdmin = user && user.uid === ADMIN_UID;
+
+    snapshot.forEach(child => {
+      const c = child.val();
+      const div = document.createElement("div");
+      div.className = "comment";
+
+      const date = new Date(c.timestamp);
+      const dataFormatada = `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+
+      div.innerHTML = `
+        <strong>${c.name}</strong>: ${c.message}
+        <span class="timestamp">${dataFormatada}</span>
+      `;
+
+      if (isAdmin) {
+        const adminBox = document.createElement("div");
+        adminBox.className = "admin-buttons";
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Apagar";
+        delBtn.onclick = () => commentsRef.child(child.key).remove();
+
+        const banBtn = document.createElement("button");
+        banBtn.textContent = "Banir";
+        banBtn.onclick = () => bannedRef.child(c.uid).set(true);
+
+        adminBox.append(delBtn, banBtn);
+        div.append(adminBox);
       }
 
-      commentsRef.push({
-        name: nomeFinal,
-        message,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-      }).then(() => {
-        messageInput.value = '';
-        if (!user) nameInput.value = '';
-      }).catch(error => {
-        showAlert("Erro ao enviar comentário: " + error.message);
-      });
+      commentsDiv.prepend(div);
     });
+  });
 
-    commentsRef.on("value", (snapshot) => {
-      commentsDiv.innerHTML = "";
-
-      snapshot.forEach(child => {
-        const comment = child.val();
-        const el = document.createElement("div");
-        el.className = "comment";
-
-        const date = new Date(comment.timestamp);
-        const dia = String(date.getDate()).padStart(2, '0');
-        const mes = String(date.getMonth() + 1).padStart(2, '0');
-        const ano = date.getFullYear();
-        const hora = String(date.getHours()).padStart(2, '0');
-        const minutos = String(date.getMinutes()).padStart(2, '0');
-        const dataFormatada = `${dia}/${mes}/${ano} - ${hora}:${minutos}`;
-
-        el.innerHTML = `
-          <strong>${comment.name}</strong>: ${comment.message}
-          <span class="timestamp">${dataFormatada}</span>
-        `;
-        commentsDiv.prepend(el);
-      });
-    });
-  </script>
+  onlineRef.on("value", snap => {
+    const count = snap.numChildren();
+    userCount.textContent = `Usuários online: ${count}`;
+  });
+</script>
 </body>
 </html>
