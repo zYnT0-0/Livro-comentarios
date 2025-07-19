@@ -365,7 +365,8 @@
   loginBtn.textContent = "Registrar";
   loginBtn.addEventListener("click", () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setPrompt('select_account'); // FORÇA A SELEÇÃO DE CONTA DO GOOGLE
+    // CORREÇÃO AQUI: Usar setCustomParameters para forçar a seleção de conta
+    provider.setCustomParameters({ prompt: 'select_account' });
     auth.signInWithPopup(provider).catch(error => {
       showAlert(`Erro ao fazer login: ${error.message}`, true);
     });
@@ -406,6 +407,8 @@
         // --- ETAPA DE REAUTENTICAÇÃO ---
         // Essencial para operações sensíveis como user.delete()
         const provider = new firebase.auth.GoogleAuthProvider();
+        // Também usar setCustomParameters aqui para a reautenticação
+        provider.setCustomParameters({ prompt: 'select_account' });
         await user.reauthenticateWithPopup(provider); // Isso abrirá um pop-up para o usuário logar novamente
 
         // --- EXCLUIR DADOS DO USUÁRIO NO DATABASE ---
