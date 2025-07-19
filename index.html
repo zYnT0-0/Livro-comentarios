@@ -1,23 +1,32 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!DOCTYPE html><html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Livro + Comentários</title>
-  <link rel="stylesheet" href="style.css" />
   <style>
+    :root {
+      --bg: #121212;
+      --fg: #ffffff;
+      --accent: #007bff;
+      --border: #333;
+      --comment-bg: #1e1e1e;
+      --comment-own-bg: #2b2b2b;
+    }
+    * { box-sizing: border-box; }
     body {
       font-family: Arial, sans-serif;
-      background: #f4f4f4;
+      background: var(--bg);
+      color: var(--fg);
       padding: 20px;
+      margin: 0;
     }
     .container {
       max-width: 600px;
       margin: auto;
-      background: #fff;
+      background: #1a1a1a;
       padding: 30px;
       border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
     h2 {
       text-align: center;
@@ -31,30 +40,35 @@
     #comment-form input,
     #comment-form textarea {
       padding: 10px;
-      border: 1px solid #ccc;
+      background: #2a2a2a;
+      border: 1px solid var(--border);
+      color: var(--fg);
       border-radius: 5px;
     }
-    #comment-form button,
-    #login-btn,
-    #logout-btn,
-    #delete-account {
+    button {
       padding: 10px;
-      background: #007bff;
+      background: var(--accent);
       border: none;
       color: white;
       border-radius: 5px;
       cursor: pointer;
     }
+    #comments {
+      margin-top: 20px;
+    }
     .comment {
-      background: #f9f9f9;
-      border: 1px solid #ddd;
+      background: var(--comment-bg);
+      border: 1px solid var(--border);
       padding: 10px;
       margin-bottom: 10px;
       border-radius: 6px;
     }
+    .comment.own {
+      background: var(--comment-own-bg);
+    }
     .timestamp {
       font-size: 0.8em;
-      color: #666;
+      color: #aaa;
       display: block;
       margin-top: 5px;
     }
@@ -63,44 +77,41 @@
     }
     #alert-box {
       display: none;
-      background: #dff0d8;
-      color: #3c763d;
-      border: 1px solid #d6e9c6;
+      background: #2e7d32;
+      color: #fff;
+      border: 1px solid #4caf50;
       padding: 10px;
       border-radius: 5px;
       text-align: center;
     }
+    .reply {
+      margin-left: 20px;
+      border-left: 2px solid #444;
+      padding-left: 10px;
+    }
   </style>
 </head>
 <body>
-
 <div class="container">
   <h2>Comentários</h2>
-
   <div id="alert-box"></div>
-
   <button id="login-btn">Registrar</button>
   <button id="logout-btn" style="display:none;">Sair</button>
   <button id="delete-account" style="display:none;">Apagar minha conta</button>
-
   <p id="user-info"></p>
   <p id="user-count"></p>
-
   <form id="comment-form">
     <input type="text" id="name" placeholder="Seu nome (só se não estiver logado)" />
     <textarea id="message" placeholder="Seu comentário" required></textarea>
     <button type="submit">Enviar</button>
   </form>
-
   <div id="comments"></div>
 </div>
-
-<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-
 <script>
+// Próxima etapa: JS completo com todas as lógicas (login, edição, threads, destaque, admin)
   const firebaseConfig = {
     apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",
     authDomain: "comentarios-livro.firebaseapp.com",
@@ -118,6 +129,9 @@
   const namesRef = db.ref("nomesUsados");
   const onlineRef = db.ref("logados");
   const bannedRef = db.ref("banidos");
+
+  const ADMIN_UID = "RTJkscPxu9MjMFL4RZSaILntfM13";
+
   const loginBtn = document.getElementById("login-btn");
   const logoutBtn = document.getElementById("logout-btn");
   const deleteBtn = document.getElementById("delete-account");
@@ -128,14 +142,16 @@
   const messageInput = document.getElementById("message");
   const commentsDiv = document.getElementById("comments");
   const alertBox = document.getElementById("alert-box");
-  const ADMIN_UID = "RTJkscPxu9MjMFL4RZSaILntfM13";
 
   function showAlert(msg) {
     alertBox.textContent = msg;
     alertBox.style.display = "block";
-    setTimeout(() => alertBox.style.display = "none", 3000);
+    setTimeout(() => alertBox.style.display = "none", 4000);
   }
 
+  // Troca botão de registro/login
+  let firstLogin = true;
+  loginBtn.textContent = "Registrar";
   loginBtn.addEventListener("click", () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider);
@@ -152,16 +168,17 @@
 
   deleteBtn.addEventListener("click", async () => {
     const user = auth.currentUser;
-    if (user) {
-      await commentsRef.orderByChild("uid").equalTo(user.uid).once("value", snapshot => {
-        snapshot.forEach(child => child.ref.remove());
-      });
-      await namesRef.child(user.uid).remove();
-      await onlineRef.child(user.uid).remove();
-      await user.delete();
-      showAlert("Conta apagada com sucesso.");
-      location.reload();
-    }
+    if (!user || user.uid === ADMIN_UID) return;
+
+    await commentsRef.orderByChild("uid").equalTo(user.uid).once("value", snapshot => {
+      snapshot.forEach(child => child.ref.remove());
+    });
+
+    await namesRef.child(user.uid).remove();
+    await onlineRef.child(user.uid).remove();
+    await user.delete();
+    showAlert("Conta apagada com sucesso.");
+    location.reload();
   });
 
   auth.onAuthStateChanged(async user => {
@@ -170,53 +187,61 @@
       logoutBtn.style.display = "inline-block";
       deleteBtn.style.display = "inline-block";
 
-      const banSnapshot = await bannedRef.child(user.uid).once("value");
-      if (banSnapshot.exists()) {
-        alert("Você foi banido deste site.");
+      const ban = await bannedRef.child(user.uid).once("value");
+      if (ban.exists()) {
+        alert("Você foi banido.");
         auth.signOut();
         return;
       }
 
       const nameSnap = await namesRef.child(user.uid).once("value");
-      let nomeFinal;
+      let nick;
 
       if (!nameSnap.exists()) {
-        const nome = prompt("Escolha seu nome de usuário:");
-        if (!nome || nome.trim() === "") return auth.signOut();
-        const checkName = await namesRef.orderByValue().equalTo(nome).once("value");
-        if (checkName.exists()) {
-          alert("Esse nome já está em uso.");
-          auth.signOut();
-          return;
-        }
-        await namesRef.child(user.uid).set(nome);
-        nomeFinal = nome;
+        let tryName;
+        do {
+          tryName = prompt("Escolha um nome único:");
+          if (!tryName) return auth.signOut();
+          const exists = await namesRef.orderByValue().equalTo(tryName).once("value");
+          if (exists.exists()) showAlert("Nome já está em uso.");
+        } while (!tryName || (await namesRef.orderByValue().equalTo(tryName).once("value")).exists());
+
+        await namesRef.child(user.uid).set(tryName);
+        nick = tryName;
       } else {
-        nomeFinal = nameSnap.val();
+        nick = nameSnap.val();
+        firstLogin = false;
+        loginBtn.textContent = "Login";
       }
 
-      userInfo.textContent = `Logado como: ${nomeFinal}`;
+      userInfo.innerHTML = `👤 Logado - <strong>${nick}</strong>`;
       nameInput.style.display = "none";
       onlineRef.child(user.uid).set(true);
       onlineRef.child(user.uid).onDisconnect().remove();
+    } else {
+      loginBtn.textContent = "Registrar";
+      loginBtn.style.display = "inline-block";
+      logoutBtn.style.display = "none";
+      deleteBtn.style.display = "none";
+      nameInput.style.display = "inline-block";
     }
   });
 
   form.addEventListener("submit", async e => {
     e.preventDefault();
     const user = auth.currentUser;
-    if (!user) return alert("Você precisa estar logado.");
+    if (!user) return showAlert("Faça login para comentar.");
 
-    const message = messageInput.value.trim();
-    if (!message) return alert("Mensagem vazia.");
+    const text = messageInput.value.trim();
+    if (!text) return;
 
-    const nameSnap = await namesRef.child(user.uid).once("value");
-    const nome = nameSnap.exists() ? nameSnap.val() : "";
+    const nickSnap = await namesRef.child(user.uid).once("value");
+    const nick = nickSnap.exists() ? nickSnap.val() : "";
 
     await commentsRef.push({
       uid: user.uid,
-      name: nome,
-      message,
+      name: nick,
+      message: text.replace(/\n/g, "<br>"),
       timestamp: firebase.database.ServerValue.TIMESTAMP
     });
 
@@ -233,27 +258,42 @@
       const div = document.createElement("div");
       div.className = "comment";
 
+      if (user && user.uid === c.uid) {
+        div.style.background = "#d3f3d3";
+      }
+
       const date = new Date(c.timestamp);
-      const dataFormatada = `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+      const dataFormatada = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
       div.innerHTML = `
-        <strong>${c.name}</strong>: ${c.message}
-        <span class="timestamp">${dataFormatada}</span>
+        <strong>${c.name}</strong> - ${dataFormatada}:<br>${c.message}
       `;
 
-      if (isAdmin) {
-        const adminBox = document.createElement("div");
-        adminBox.className = "admin-buttons";
-        const delBtn = document.createElement("button");
-        delBtn.textContent = "Apagar";
-        delBtn.onclick = () => commentsRef.child(child.key).remove();
+      if (user && user.uid === c.uid) {
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Editar";
+        editBtn.onclick = () => {
+          const novoTexto = prompt("Edite sua mensagem:", c.message.replace(/<br>/g, "\n"));
+          if (novoTexto)
+            commentsRef.child(child.key).update({ message: novoTexto.replace(/\n/g, "<br>") });
+        };
+        div.appendChild(editBtn);
+      }
 
-        const banBtn = document.createElement("button");
-        banBtn.textContent = "Banir";
-        banBtn.onclick = () => bannedRef.child(c.uid).set(true);
+      if (isAdmin && c.uid !== ADMIN_UID) {
+        const box = document.createElement("div");
+        box.className = "admin-buttons";
 
-        adminBox.append(delBtn, banBtn);
-        div.append(adminBox);
+        const del = document.createElement("button");
+        del.textContent = "🗑️";
+        del.onclick = () => commentsRef.child(child.key).remove();
+
+        const ban = document.createElement("button");
+        ban.textContent = "🚫";
+        ban.onclick = () => bannedRef.child(c.uid).set(true);
+
+        box.append(del, ban);
+        div.appendChild(box);
       }
 
       commentsDiv.prepend(div);
@@ -261,9 +301,10 @@
   });
 
   onlineRef.on("value", snap => {
-    const count = snap.numChildren();
-    userCount.textContent = `Usuários online: ${count}`;
+    userCount.textContent = `👥 Usuários online: ${snap.numChildren()}`;
   });
+</script>
+// Me avise para colar o script completo agora
 </script>
 </body>
 </html>
