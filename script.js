@@ -50,13 +50,12 @@ let replyToAuthorName = null;
 let allUsersMap = {}; // Armazena { lowercaseName: { name: originalName, uid: uid } }
 let currentLoggedInUserUid = null;
 let currentLoggedInUserName = null;
+let isAuthReady = false; // Flag para indicar se a autenticação está pronta
+let isNamesReady = false; // Flag para indicar se os nomes foram carregados
 
 // Elementos para Modo Escuro/Claro
 const themeToggle = document.getElementById("theme-toggle"); // Botão ou switch para alternar
 const body = document.body; // O elemento body para aplicar a classe do tema
-
-// Flag para controlar se os dados iniciais de nomes e comentários foram carregados
-let initialDataLoaded = false;
 
 // Função para aplicar o tema salvo
 function applyTheme(theme) {
@@ -248,6 +247,7 @@ deleteBtn.addEventListener("click", async () => {
 auth.onAuthStateChanged(async user => {
     currentLoggedInUserUid = user ? user.uid : null;
     currentLoggedInUserName = null; // Resetar nome
+    isAuthReady = true; // Autenticação está pronta
 
     if (user) {
         loginBtn.style.display = "none";
@@ -283,8 +283,6 @@ auth.onAuthStateChanged(async user => {
             }
             await namesRef.child(user.uid).set(tryName);
             nick = tryName;
-            // Força a atualização do allUsersMap e re-renderização após um novo nome ser definido
-            namesRef.once("value"); // Dispara o listener do namesRef novamente
         } else {
             nick = nameSnap.val();
         }
@@ -296,15 +294,14 @@ auth.onAuthStateChanged(async user => {
 
     } else {
         loginBtn.textContent = "Registrar ou Fazer Login";
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
         deleteBtn.style.display = "none";
         userInfo.innerHTML = "Faça login para comentar.";
         nameInput.style.display = "inline-block"; // Show name input if not logged in
     }
 
-    // Garante que a renderização ocorra após a autenticação e o nome estar disponível
-    renderAllComments();
+    // Tenta renderizar os comentários após a autenticação estar pronta
+    checkAndRenderComments();
 });
 
 // Remove a funcionalidade de enviar mensagem com Enter
@@ -357,6 +354,11 @@ form.addEventListener("submit", async e => {
 
 // Listener de comentários
 commentsRef.on("value", async snapshot => {
+    // Só renderiza se a autenticação e os nomes estiverem prontos
+    if (!isAuthReady || !isNamesReady) {
+        return; // Não renderiza ainda
+    }
+
     commentsDiv.innerHTML = "";
     const commentsArray = [];
     snapshot.forEach(child => {
@@ -520,15 +522,18 @@ namesRef.on("value", async snap => {
         allUsersMap[name.toLowerCase()] = { name: name, uid: uid };
     });
 
-    // Marca que os dados iniciais de nomes foram carregados
-    initialDataLoaded = true;
-    // Força a renderização dos comentários após o allUsersMap ser populado
-    renderAllComments();
+    isNamesReady = true; // Nomes foram carregados
+    // Tenta renderizar os comentários após os nomes estarem prontos
+    checkAndRenderComments();
 });
 
-function renderAllComments() {
-    // Dispara o listener principal de comentários para re-renderizar
-    commentsRef.once("value");
+// Nova função para verificar e disparar a renderização dos comentários
+function checkAndRenderComments() {
+    if (isAuthReady && isNamesReady) {
+        // Se ambos estiverem prontos, força uma leitura para garantir que o listener commentsRef.on("value")
+        // seja disparado e renderize o conteúdo.
+        commentsRef.once("value");
+    }
 }
 
 // Função para aplicar markdown (menções removidas)
