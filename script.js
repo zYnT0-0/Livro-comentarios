@@ -444,27 +444,25 @@ const firebaseConfig = {
 // Salva os nomes online para referência nas menções
 // Salva os nomes online para referência nas menções
 // Salva os nomes online para referência nas menções
-let onlineUsersMap = {};
-onlineRef.on("value", async snap => {
-  userCount.textContent = `👥 Usuários online: ${snap.numChildren()}`;
-  onlineUsersMap = {};
+// Carrega todos os nomes registrados no sistema para aplicar menções
+let allUsersMap = {};
+namesRef.on("value", async snap => {
+  allUsersMap = {};
 
-  const uids = Object.keys(snap.val() || {});
-  for (const uid of uids) {
-    const nameSnap = await namesRef.child(uid).once("value");
-    if (nameSnap.exists()) {
-      onlineUsersMap[nameSnap.val()] = uid;
-    }
-  }
+  snap.forEach(child => {
+    const uid = child.key;
+    const name = child.val();
+    allUsersMap[name.toLowerCase()] = uid;
+  });
 
-  // ✅ Recarrega todos os comentários após o mapa de usuários online estar pronto
+  // Re-renderiza os comentários com menções estilizadas
   renderAllComments();
 });
 
 // Função para transformar @nomes em spans destacados
 function parseMentions(text) {
   return text.replace(/@(\w+)/g, (match, username) => {
-    if (onlineUsersMap[username]) {
+    if (allUsersMap[username.toLowerCase()]) {
       return `<span class="mention">@${username}</span>`;
     }
     return match;
@@ -480,14 +478,11 @@ function renderMessage(text) {
 
   // Substitui @menções por spans personalizados
   html = html.replace(/@(\w{1,20})/g, (match, username) => {
-    if (onlineUsersMap[username]) {
-      return `<span class="mention">@${username}</span>`;
-    }
-    return match;
-  });
-
-  return html;
-}
+  if (allUsersMap[username.toLowerCase()]) {
+    return `<span class="mention">@${username}</span>`;
+  }
+  return match;
+});
 
 const mentionBox = document.getElementById("mention-suggestions");
 
