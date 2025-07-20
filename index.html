@@ -6,8 +6,9 @@
   <title>Livro + Comentários</title>
   <style>
    /* Variáveis para o tema escuro (padrão) */
+/* Variáveis para o tema escuro (padrão) */
 :root {
-    --bg-dark: #2f3136; /* Fundo principal do container, agora será o fundo do body também */
+    --bg-dark: #1e1e1e; /* Darker background for chat feel */
     --fg-dark: #ffffff;
     --accent-dark: #5865f2; /* Azul mais forte */
     --border-dark: #36393f; /* Darker border for chat feel */
@@ -16,7 +17,7 @@
     --admin-bg-dark: var(--comment-bg-dark); /* AGORA IGUAL AO DO COMENTÁRIO NORMAL */
     --input-bg-dark: #40444b;
     --button-hover-dark: #4752c4; /* Ajuste para o hover do botão */
-    --container-bg-dark: #2f3136; /* Mantido para referência, mas o body usará ele */
+    --container-bg-dark: #2f3136;
     --reply-block-bg-dark: #40444b;
     --reply-block-message-dark: #b9bbbe;
     --reply-highlight-bg-dark: #4a5a6b; /* Fundo azul mais escuro para destaque de resposta (para mim) */
@@ -25,7 +26,7 @@
 
 /* Variáveis para o tema claro */
 body:not(.dark-mode) {
-    --bg: #ffffff; /* Fundo muito claro, agora será o fundo do body também */
+    --bg: #f5f5f5; /* Fundo muito claro */
     --fg: #333333; /* Texto escuro */
     --accent: #007bff; /* Azul padrão do bootstrap para botões */
     --border: #cccccc; /* Borda clara */
@@ -34,7 +35,7 @@ body:not(.dark-mode) {
     --admin-bg: var(--comment-bg); /* AGORA IGUAL AO DO COMENTÁRIO NORMAL */
     --input-bg: #ffffff;
     --button-hover: #0056b3; /* Hover mais escuro para botões azuis */
-    --container-bg: #ffffff; /* Mantido para referência, mas o body usará ele */
+    --container-bg: #ffffff; /* Fundo do container branco */
     --reply-block-bg: #e9ecef; /* Cinza claro para bloco de resposta */
     --reply-block-message: #666666; /* Texto cinza escuro para snippet */
     --reply-highlight-bg: #d4edda; /* Fundo verde claro para destaque de resposta (para mim) */
@@ -60,48 +61,30 @@ body.dark-mode {
 }
 
 * { box-sizing: border-box; }
-html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%; /* Garante que ocupem 100% da altura do iframe */
-    overflow: hidden; /* ESCONDE A BARRA DE ROLAGEM DO HTML E BODY DO IFRAME */
-}
-
-/* Esconde a barra de rolagem para navegadores baseados em WebKit (Chrome, Safari, Opera) */
-::-webkit-scrollbar {
-    width: 0 !important;
-    height: 0 !important;
-    background: transparent !important;
-}
-/* Esconde a barra de rolagem para Firefox */
-html {
-    scrollbar-width: none !important;
-}
-
 body {
     font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Discord font stack */
-    background: var(--bg); /* O body agora usa a cor principal do container */
+    background: var(--bg);
     color: var(--fg);
+    padding: 20px;
+    margin: 0;
     display: flex;
     justify-content: center;
-    align-items: stretch; /* Garante que o container ocupe a altura total disponível */
-    min-height: 100vh; /* Mantém a altura mínima */
+    align-items: center;
+    min-height: 100vh;
     transition: background-color 0.3s ease, color 0.3s ease; /* Transição suave para tema */
 }
 .container {
-    max-width: 700px;
+    max-width: 700px; /* Slightly wider for chat layout */
     width: 100%;
-    height: 100%; /* Ocupa a altura total do body (que é 100% do iframe) */
     margin: auto;
-    background: var(--container-bg); /* Mantém a cor de fundo */
+    background: var(--container-bg);
     padding: 30px;
-    border-radius: 0; /* REMOVIDO: Borda arredondada */
-    box-shadow: none; /* REMOVIDO: Sombra */
+    border-radius: 8px; /* Slightly less rounded */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     display: flex;
     flex-direction: column;
     gap: 15px;
     transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-    overflow-y: auto; /* Permite rolagem interna no container */
 }
 h2 {
     text-align: center;
@@ -135,7 +118,7 @@ button {
     background: var(--accent);
     border: none;
     color: white;
-    border-radius: 50px; /* Botões mais arredondados */
+    border-radius: 5px;
     cursor: pointer;
     font-weight: bold;
     transition: background-color 0.2s ease;
@@ -148,22 +131,7 @@ button:hover {
     display: flex;
     flex-direction: column-reverse; /* Newest comments at the bottom (like chat) */
     gap: 15px; /* Spacing between chat messages */
-    flex-grow: 1; /* PERMITE QUE A ÁREA DE COMENTÁRIOS PREENCHA O ESPAÇO DISPONÍVEL */
-    overflow-y: auto; /* Adiciona rolagem APENAS à área de comentários, se necessário */
-    padding-right: 10px; /* Adiciona um pequeno padding para a rolagem interna não ficar colada */
 }
-/* Esconde a barra de rolagem para navegadores baseados em WebKit (Chrome, Safari, Opera) DENTRO DE #comments */
-#comments::-webkit-scrollbar {
-    width: 0 !important;
-    height: 0 !important;
-    background: transparent !important;
-}
-/* Esconde a barra de rolagem para Firefox DENTRO DE #comments */
-#comments {
-    scrollbar-width: none !important;
-}
-
-
 .comment {
     background: var(--comment-bg);
     border: none; /* No border for chat look */
@@ -179,7 +147,7 @@ button:hover {
    herda de .comment ou .comment.own se for um comentário próprio do admin. */
 .comment-header {
     display: flex;
-    align-items: center; /* AGORA CENTRALIZA VERTICALMENTE TODOS OS ITENS */
+    align-items: center;
     gap: 8px;
     margin-bottom: 5px;
 }
@@ -199,10 +167,10 @@ body:not(.dark-mode) .comment.admin .comment-author {
     font-weight: bold; /* Manter negrito */
 }
 
-/* Estilo para a imagem do admin */
+/* NOVO: Estilo para a imagem do admin */
 .admin-icon {
-    width: 20px; /* Largura da imagem */
-    height: 20px; /* Altura da imagem */
+    width:30px;/* Largura da imagem */
+    height: 30px;/* Altura da imagem */
     margin-right: 4px; /* Espaçamento entre o ícone e o nome */
     border-radius: 3px; /* Bordas levemente arredondadas se for uma imagem quadrada */
 }
@@ -384,7 +352,7 @@ body:not(.dark-mode) .comment-reply-block.comment-reply-deleted {
     font-style: normal; /* No italics for deleted message text */
     color: #f04747;
 }
-body:not(.dark-mode) .comment-reply-block.comment-reply-deleted .reply-reply-block-message {
+body:not(.dark-mode) .comment-reply-block.comment-reply-deleted .reply-block-message {
     color: #dc3545;
 }
 
@@ -417,3 +385,53 @@ body:not(.dark-mode) .comment-reply-block.comment-reply-deleted .reply-reply-blo
     border-radius: 4px;
     font-size: 0.9em;
 }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="alert-box"></div>
+    <h2>Comentários</h2>
+    <div id="user-info-section">
+      <p id="user-info"></p>
+      <p id="user-count"></p>
+    </div>
+    <div id="user-controls">
+      <button id="login-btn">Registrar</button>
+      <button id="logout-btn" style="display:none;">Sair</button>
+      <button id="delete-account" style="display:none;">Apagar minha conta</button>
+      <button id="theme-toggle" class="theme-toggle-btn">Mudar Tema</button>
+    </div>
+
+    <form id="comment-form">
+      <input type="text" id="name" placeholder="Seu nome (só se não estiver logado)" style="display:none;" autocomplete="off" />
+      <div id="reply-box" style="display:none;">
+          <span class="reply-message"></span>
+          <button type="button" class="cancel-reply-btn">X</button>
+      </div>
+      <textarea id="message" placeholder="Seu comentário" required rows="3" autocomplete="off"></textarea>
+      <ul id="mention-suggestions"></ul>
+      
+      <button type="submit">Enviar</button>
+    </form>
+    <div id="comments"></div>
+  </div>
+
+  <div id="custom-modal" class="modal-overlay">
+    <div class="modal-content">
+      <p id="modal-message"></p>
+      <input type="text" id="modal-input" style="display:none;" />
+      <textarea id="modal-textarea" style="display:none;"></textarea>
+      <div class="modal-buttons">
+        <button id="modal-confirm-btn">Confirmar</button>
+        <button id="modal-cancel-btn" class="cancel-btn" style="display:none;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
