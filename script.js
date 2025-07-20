@@ -33,7 +33,7 @@ const alertBox = document.getElementById("alert-box");
 const customModal = document.getElementById("custom-modal");
 const modalMessage = document.getElementById("modal-message");
 const modalInput = document.getElementById("modal-input");
-const modalTextarea = document = document.getElementById("modal-textarea");
+const modalTextarea = document.getElementById("modal-textarea");
 const modalConfirmBtn = document.getElementById("modal-confirm-btn");
 const modalCancelBtn = document.getElementById("modal-cancel-btn");
 
@@ -59,14 +59,16 @@ function applyTheme(theme) {
     if (theme === 'dark') {
         body.classList.add('dark-mode');
         localStorage.setItem('theme', 'dark');
+        if (themeToggle) themeToggle.textContent = 'Tema Claro';
     } else {
         body.classList.remove('dark-mode');
         localStorage.setItem('theme', 'light');
+        if (themeToggle) themeToggle.textContent = 'Tema Escuro';
     }
 }
 
 // Verifica o tema salvo no localStorage ou define um padrão
-const savedTheme = localStorage.getItem('theme') || 'light';
+const savedTheme = localStorage.getItem('theme') || 'dark'; // Padrão para dark agora
 applyTheme(savedTheme);
 
 // Event listener para o botão de alternar tema
@@ -347,9 +349,6 @@ form.addEventListener("submit", async e => {
 // Listener de comentários
 commentsRef.on("value", async snapshot => {
     commentsDiv.innerHTML = "";
-    // currentLoggedInUserUid já está sendo definido pelo auth.onAuthStateChanged
-    // e allUsersMap pelo namesRef.on("value")
-
     const commentsArray = [];
     snapshot.forEach(child => {
         commentsArray.push({ key: child.key, ...child.val() });
@@ -360,10 +359,13 @@ commentsRef.on("value", async snapshot => {
     // Using Promise.all to fetch original comments in parallel for performance
     const commentsWithReplyData = await Promise.all(commentsArray.map(async (c) => {
         let replyToHtml = '';
+        let originalCommentAuthorUid = null; // Para verificar se o usuário logado foi o autor da mensagem original
+
         if (c.replyToId && c.replyToAuthor) {
             const originalCommentSnap = await commentsRef.child(c.replyToId).once("value");
             if (originalCommentSnap.exists()) {
                 const originalComment = originalCommentSnap.val();
+                originalCommentAuthorUid = originalComment.uid; // Pega o UID do autor da mensagem original
                 // Take first 80 characters of the original message for snippet
                 const originalMessageSnippet = originalComment.message.substring(0, 80) + (originalComment.message.length > 80 ? '...' : '');
                 replyToHtml = `
@@ -380,7 +382,7 @@ commentsRef.on("value", async snapshot => {
                 `;
             }
         }
-        return { ...c, replyToHtml: replyToHtml };
+        return { ...c, replyToHtml: replyToHtml, originalCommentAuthorUid: originalCommentAuthorUid };
     }));
 
     // Renderiza cada comentário. Agora, passando o UID do usuário logado para renderMessage.
@@ -388,9 +390,14 @@ commentsRef.on("value", async snapshot => {
         const div = document.createElement("div");
         div.className = "comment";
 
-        // Adiciona classe para destaque de respostas
+        // Adiciona classe para destaque de respostas GERAIS
         if (c.replyToId) {
             div.classList.add("is-reply");
+        }
+
+        // NOVO: Adiciona classe para destaque de resposta *se for para o usuário logado*
+        if (currentLoggedInUserUid && c.replyToId && c.originalCommentAuthorUid === currentLoggedInUserUid) {
+            div.classList.add("is-reply-to-me");
         }
 
         if (currentLoggedInUserUid && currentLoggedInUserUid === c.uid) { // Usar currentLoggedInUserUid
@@ -493,82 +500,38 @@ commentsRef.on("value", async snapshot => {
     }
 });
 
-// Carrega todos os nomes registrados no sistema para aplicar menções
+// Carrega todos os nomes registrados no sistema (mantido para compatibilidade, mesmo sem menções ativas)
 namesRef.on("value", async snap => {
     allUsersMap = {}; // Resetar mapa para garantir que esteja atualizado
 
     snap.forEach(child => {
         const uid = child.key;
         const name = child.val();
-        // Não precisamos mais do allUsersMap para menções, mas mantemos para outras funcionalidades se existirem
-        allUsersMap[name.toLowerCase()] = { name: name, uid: uid }; // Armazenar o nome original e o UID
+        allUsersMap[name.toLowerCase()] = { name: name, uid: uid };
     });
 
-    // Re-renderiza os comentários com menções estilizadas (após atualização do mapa)
-    // Isso é crucial para que a exibição das menções seja atualizada se o mapa de usuários mudar
     renderAllComments();
 });
 
-// A função renderAllComments agora não precisa do .once("value")
-// Apenas a chama. O listener commentsRef.on("value") fará o resto.
 function renderAllComments() {
-    // Apenas força uma re-avaliação do listener principal de comentários.
-    // Isso é útil para garantir que o render é disparado após allUsersMap ser atualizado
-    // ou o estado de autenticação ser definido.
     commentsRef.once("value");
 }
 
 // Função para aplicar markdown (menções removidas)
 function renderMessage(text, authorUid, currentLoggedInUserUid) {
     if (!text) return "";
-    // Aplica Markdown completo com marked.js
     let html = marked.parse(text);
-    return html; // Retorna o HTML processado
+    return html;
 }
 
 const mentionBox = document.getElementById("mention-suggestions");
 
 // Removendo listener de menções se ele não for mais usado
-// Se você não for usar a funcionalidade de sugestão de menções, pode remover o bloco abaixo
 if (messageInput && mentionBox) { // Adicionado verificação para garantir que os elementos existem
     messageInput.addEventListener("input", async (e) => {
-        const cursorPos = messageInput.selectionStart;
-        const textBeforeCursor = messageInput.value.substring(0, cursorPos);
-        const match = textBeforeCursor.match(/@(\w*)$/);
-
-        // Se você não quiser mais as sugestões, remova o if(match) e defina display none para mentionBox
-        if (match) {
-            const prefix = match[1].toLowerCase();
-            // Usa allUsersMap para sugerir todos os usuários registrados
-            const suggestions = Object.keys(allUsersMap)
-                .filter(nameKey => nameKey.startsWith(prefix))
-                .map(nameKey => allUsersMap[nameKey].name); // Retorna o nome original para a sugestão
-
-            if (suggestions.length === 0) {
-                mentionBox.style.display = "none";
-                return;
-            }
-
-            mentionBox.innerHTML = suggestions.map(name => `<li>${name}</li>`).join("");
-            const rect = messageInput.getBoundingClientRect();
-            mentionBox.style.left = `${rect.left + window.scrollX}px`;
-            mentionBox.style.top = `${rect.bottom + window.scrollY}px`;
-            mentionBox.style.width = `${rect.width}px`;
-            mentionBox.style.display = "block";
-
-            Array.from(mentionBox.querySelectorAll("li")).forEach(li => {
-                li.addEventListener("click", () => {
-                    const newText = messageInput.value.substring(0, cursorPos).replace(/@(\w*)$/, `@${li.textContent} `) +
-                        messageInput.value.substring(cursorPos);
-                    messageInput.value = newText;
-                    messageInput.focus();
-                    mentionBox.style.display = "none";
-                });
-            });
-
-        } else {
-            mentionBox.style.display = "none";
-        }
+        // Lógica de sugestão de menções removida para focar na solicitação do usuário
+        // Oculta a caixa de sugestões
+        mentionBox.style.display = "none";
     });
 
     document.addEventListener("click", (e) => {
