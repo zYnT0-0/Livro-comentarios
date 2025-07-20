@@ -5,22 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Livro + Comentários</title>
   <style>
-    /* (Seu estilo CSS já está correto, omitido aqui para brevidade) */
-    
     :root {
-      --bg: #1e1e1e; /* Darker background for chat feel */
+      --bg: #1e1e1e;
       --fg: #ffffff;
-      --accent: #5865f2; /* Azul mais forte */
-      --border: #36393f; /* Darker border for chat feel */
-      --comment-bg: #36393f; /* Discord dark grey for comments */
-      --comment-own-bg: #4f545c; /* Slightly lighter grey for own comments */
-      --admin-bg: #3b3f4a; /* Admin comments também com o azul mais forte */
+      --accent: #5865f2;
+      --border: #36393f;
+      --comment-bg: #36393f;
+      --comment-own-bg: #4f545c;
+      --admin-bg: #3f4ab0;
       --input-bg: #40444b;
-      --button-hover: #4752c4; /* Ajuste para o hover do botão */
+      --button-hover: #4752c4;
     }
     * { box-sizing: border-box; }
     body {
-      font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Discord font stack */
+      font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
       background: var(--bg);
       color: var(--fg);
       padding: 20px;
@@ -31,12 +29,12 @@
       min-height: 100vh;
     }
     .container {
-      max-width: 700px; /* Slightly wider for chat layout */
+      max-width: 700px;
       width: 100%;
       margin: auto;
-      background: #2f3136; /* Discord main background */
+      background: #2f3136;
       padding: 30px;
-      border-radius: 8px; /* Slightly less rounded */
+      border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       display: flex;
       flex-direction: column;
@@ -51,13 +49,13 @@
       display: flex;
       gap: 10px;
       margin-bottom: 10px;
-      flex-wrap: wrap; /* Allow wrapping on smaller screens */
+      flex-wrap: wrap;
     }
     #comment-form {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      margin-top: 10px; /* Less margin */
+      margin-top: 10px;
     }
     #comment-form input,
     #comment-form textarea {
@@ -66,10 +64,10 @@
       border: 1px solid var(--border);
       color: var(--fg);
       border-radius: 5px;
-      resize: vertical; /* Allow vertical resize for textarea */
+      resize: vertical;
     }
     button {
-      padding: 10px 15px; /* More balanced padding */
+      padding: 10px 15px;
       background: var(--accent);
       border: none;
       color: white;
@@ -84,21 +82,21 @@
     #comments {
       margin-top: 20px;
       display: flex;
-      flex-direction: column-reverse; /* Newest comments at the bottom (like chat) */
-      gap: 15px; /* Spacing between chat messages */
+      flex-direction: column-reverse;
+      gap: 15px;
     }
     .comment {
       background: var(--comment-bg);
-      border: none; /* No border for chat look */
+      border: none;
       padding: 12px 15px;
-      border-radius: 8px; /* Rounded message bubbles */
-      word-wrap: break-word; /* Ensure long words wrap */
+      border-radius: 8px;
+      word-wrap: break-word;
     }
     .comment.own {
       background: var(--comment-own-bg);
     }
     .comment.admin {
-      background: var(--admin-bg); /* Admin comments distinct */
+      background: var(--admin-bg);
     }
     .comment-header {
       display: flex;
@@ -108,238 +106,100 @@
     }
     .comment-author {
       font-weight: bold;
-      color: var(--accent); /* Author name in accent color */
+      color: var(--accent);
     }
     .comment.admin .comment-author {
-      color: #c4c4ff; /* Um azul mais claro e vibrante para o nome do Admin */
-      text-shadow: 0 0 5px rgba(196, 196, 255, 0.5); /* Um brilho sutil */
+      color: #c4c4ff;
+      text-shadow: 0 0 5px rgba(196, 196, 255, 0.5);
     }
     .comment-timestamp {
       font-size: 0.8em;
-      color: #b9bbbe; /* Um cinza mais claro para a data e hora */
+      color: #b9bbbe;
     }
     .comment.admin .comment-timestamp {
-      color: #e0e0ff; /* Azul bem claro para a data e hora dos comentários do Admin */
+      color: #e0e0ff;
     }
     .comment-message {
       margin-top: 5px;
-      white-space: pre-wrap; /* Preserve whitespace and line breaks */
+      white-space: pre-wrap;
     }
     .comment-actions {
       margin-top: 8px;
       display: flex;
-      gap: 8px; /* Spacing between action buttons */
+      gap: 8px;
     }
     .comment-actions button {
-      padding: 6px 10px; /* Smaller padding for action buttons */
+      padding: 6px 10px;
       font-size: 0.85em;
     }
     .admin-buttons {
-      margin-left: auto; /* Push admin buttons to the right */
+      margin-left: auto;
       display: flex;
       gap: 8px;
     }
     .admin-buttons button {
-      background-color: #f04747; /* Red for delete/ban */
+      background-color: #f04747;
     }
     .admin-buttons button:hover {
       background-color: #cc3a3a;
     }
-
-    /* Custom Modal/Alert Styling */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.7);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      display: none; /* Hidden by default */
-    }
-    .modal-content {
-      background: #36393f;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-      max-width: 450px;
-      width: 90%;
-      text-align: center;
-      color: var(--fg);
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .modal-content input, .modal-content textarea {
-      padding: 10px;
-      background: var(--input-bg);
-      border: 1px solid var(--border);
-      color: var(--fg);
-      border-radius: 5px;
-      width: 100%;
-    }
-    .modal-content .modal-buttons {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-    }
-    .modal-content .modal-buttons button {
-      flex: 1;
-      padding: 10px;
-    }
-    .modal-content .modal-buttons .cancel-btn {
-      background-color: #72767d;
-    }
-    .modal-content .modal-buttons .cancel-btn:hover {
-      background-color: #5d6067;
-    }
-
-    #alert-box {
-      display: none;
-      background: #43b581; /* Discord green for success */
-      color: #fff;
-      border: none;
-      padding: 10px;
-      border-radius: 5px;
-      text-align: center;
+    .mention {
+      color: #00aff4;
       font-weight: bold;
-      margin-bottom: 15px; /* Spacing below alert */
+      background-color: rgba(0, 170, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
     }
-    .error-alert {
-      background: #f04747 !important; /* Discord red for errors */
+    .comment-message strong {
+      font-weight: bold;
+      color: #ffffff;
     }
-
-    /* --- Reply Box Styling (for composing a reply) --- */
-    #reply-box {
-        background-color: var(--comment-bg);
-        border-radius: 5px;
-        padding: 8px 12px;
-        margin-bottom: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.9em;
-        color: #b9bbbe;
-        border-left: 3px solid var(--accent); /* Indicate it's a reply context */
+    .comment-message em {
+      font-style: italic;
+      color: #b9bbbe;
     }
-    #reply-box .reply-message {
-        flex-grow: 1;
+    .comment-message u {
+      text-decoration: underline;
+      color: #b9bbbe;
     }
-    #reply-box .cancel-reply-btn {
-        background: none;
-        border: none;
-        color: #f04747; /* Red X */
-        font-size: 1.2em;
-        cursor: pointer;
-        padding: 0 5px;
+    .comment-message code {
+      font-family: "Consolas", monospace;
+      background-color: #202225;
+      color: #f1f1f1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
     }
-    #reply-box .cancel-reply-btn:hover {
-        color: #cc3a3a;
+    #mention-suggestions {
+      position: absolute;
+      background-color: #2f3136;
+      border: 1px solid #202225;
+      border-radius: 5px;
+      max-height: 200px;
+      overflow-y: auto;
+      width: 100%;
+      margin-top: 5px;
+      z-index: 999;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      list-style: none;
+      padding: 4px 0;
+      display: none;
     }
-    /* --- Styles for displaying a sent reply (quote block) --- */
-    .comment-reply-block {
-        background-color: #40444b; /* Slightly darker than comment-bg */
-        border-left: 4px solid var(--accent);
-        padding: 8px 12px;
-        border-radius: 5px;
-        margin-bottom: 10px; /* Space between quote and current message */
-        font-size: 0.9em;
-        color: #dcdcdc;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        max-width: 100%; /* Ensure it fits within parent */
+    #mention-suggestions li {
+      padding: 8px 12px;
+      cursor: pointer;
+      color: #dcddde;
     }
-    .comment-reply-block .reply-block-author {
-        font-weight: bold;
-        color: var(--accent); /* Same accent color for author */
+    #mention-suggestions li:hover,
+    #mention-suggestions li.active {
+      background-color: #4f545c;
+      color: #ffffff;
     }
-    .comment-reply-block .reply-block-message {
-        font-style: italic;
-        color: #b9bbbe; /* Lighter grey for the message snippet */
-        overflow: hidden;
-        white-space: nowrap; /* Keep snippet on one line */
-        text-overflow: ellipsis; /* Add ellipsis if text is too long */
-    }
-    .comment-reply-block.comment-reply-deleted {
-        background-color: #5d6067; /* Different color for deleted reply */
-        border-left-color: #f04747; /* Red border for deleted */
-        color: #f04747; /* Text color for deleted message */
-    }
-    .comment-reply-block.comment-reply-deleted .reply-block-message {
-        font-style: normal; /* No italics for deleted message text */
-        color: #f04747;
-    }
-
-        /* Sugestão estilo Discord ao digitar @nome */
-#mention-suggestions {
-  position: absolute;
-  background-color: #2f3136;
-  border: 1px solid #202225;
-  border-radius: 5px;
-  max-height: 200px;
-  overflow-y: auto;
-  width: 100%;
-  margin-top: 5px;
-  z-index: 999;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  list-style: none;
-  padding: 4px 0;
-  display: none;
-}
-
-#mention-suggestions li {
-  padding: 8px 12px;
-  cursor: pointer;
-  color: #dcddde;
-}
-
-#mention-suggestions li:hover,
-#mention-suggestions li.active {
-  background-color: #4f545c;
-  color: #ffffff;
-}
-
-/* Estilo das menções dentro do comentário */
-.mention {
-  color: #00aff4;
-  font-weight: bold;
-  background-color: rgba(0, 170, 255, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-/* Estilo para elementos markdown */
-.comment-message strong {
-  font-weight: bold;
-  color: #ffffff;
-}
-.comment-message em {
-  font-style: italic;
-  color: #b9bbbe;
-}
-.comment-message u {
-  text-decoration: underline;
-  color: #b9bbbe;
-}
-.comment-message code {
-  font-family: "Consolas", monospace;
-  background-color: #202225;
-  color: #f1f1f1;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.9em;
-}
-    
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- (seu conteúdo principal está intacto) -->
     <div id="alert-box"></div>
     <h2>Comentários</h2>
     <div id="user-info-section">
@@ -351,33 +211,14 @@
       <button id="logout-btn" style="display:none;">Sair</button>
       <button id="delete-account" style="display:none;">Apagar minha conta</button>
     </div>
-
     <form id="comment-form">
       <input type="text" id="name" placeholder="Seu nome (só se não estiver logado)" style="display:none;" />
-      <div id="reply-box" style="display:none;">
-          <span class="reply-message"></span>
-          <button type="button" class="cancel-reply-btn">X</button>
-      </div>
       <textarea id="message" placeholder="Seu comentário" required rows="3"></textarea>
       <ul id="mention-suggestions"></ul>
-      
       <button type="submit">Enviar</button>
     </form>
     <div id="comments"></div>
   </div>
-
-  <div id="custom-modal" class="modal-overlay">
-    <div class="modal-content">
-      <p id="modal-message"></p>
-      <input type="text" id="modal-input" style="display:none;" />
-      <textarea id="modal-textarea" style="display:none;"></textarea>
-      <div class="modal-buttons">
-        <button id="modal-confirm-btn">Confirmar</button>
-        <button id="modal-cancel-btn" class="cancel-btn" style="display:none;">Cancelar</button>
-      </div>
-    </div>
-  </div>
-
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
