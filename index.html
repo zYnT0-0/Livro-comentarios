@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Livro + Comentários</title>
   <style>
-    /* (Seu estilo CSS já está correto, omitido aqui para brevidade) */
-    
     :root {
       --bg: #1e1e1e; /* Darker background for chat feel */
       --fg: #ffffff;
@@ -274,72 +272,77 @@
         color: #f04747;
     }
 
-        /* Sugestão estilo Discord ao digitar @nome */
-#mention-suggestions {
-  position: absolute;
-  background-color: #2f3136;
-  border: 1px solid #202225;
-  border-radius: 5px;
-  max-height: 200px;
-  overflow-y: auto;
-  width: 100%;
-  margin-top: 5px;
-  z-index: 999;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  list-style: none;
-  padding: 4px 0;
-  display: none;
-}
+    /* Sugestão estilo Discord ao digitar @nome */
+    #mention-suggestions {
+      position: absolute;
+      background-color: #2f3136;
+      border: 1px solid #202225;
+      border-radius: 5px;
+      max-height: 200px;
+      overflow-y: auto;
+      width: 100%;
+      margin-top: 5px;
+      z-index: 999;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      list-style: none;
+      padding: 4px 0;
+      display: none;
+    }
 
-#mention-suggestions li {
-  padding: 8px 12px;
-  cursor: pointer;
-  color: #dcddde;
-}
+    #mention-suggestions li {
+      padding: 8px 12px;
+      cursor: pointer;
+      color: #dcddde;
+    }
 
-#mention-suggestions li:hover,
-#mention-suggestions li.active {
-  background-color: #4f545c;
-  color: #ffffff;
-}
+    #mention-suggestions li:hover,
+    #mention-suggestions li.active {
+      background-color: #4f545c;
+      color: #ffffff;
+    }
 
-/* Estilo das menções dentro do comentário */
-.mention {
-  color: #00aff4;
-  font-weight: bold;
-  background-color: rgba(0, 170, 255, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
+    /* Estilo padrão das menções (TODOS os usuários) */
+    .mention {
+      color: #00aff4; /* Azul Discord padrão para menção */
+      font-weight: bold;
+      background-color: rgba(0, 170, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
 
-/* Estilo para elementos markdown */
-.comment-message strong {
-  font-weight: bold;
-  color: #ffffff;
-}
-.comment-message em {
-  font-style: italic;
-  color: #b9bbbe;
-}
-.comment-message u {
-  text-decoration: underline;
-  color: #b9bbbe;
-}
-.comment-message code {
-  font-family: "Consolas", monospace;
-  background-color: #202225;
-  color: #f1f1f1;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.9em;
-}
-    
+    /* Estilo ESPECÍFICO para menções de ADMIN (sobrepõe o .mention) */
+    .mention.admin-mention {
+      color: #c4c4ff; /* Um azul mais claro e vibrante para o admin */
+      background-color: rgba(196, 196, 255, 0.15); /* Fundo um pouco diferente */
+      text-shadow: 0 0 3px rgba(196, 196, 255, 0.3); /* Um brilho sutil */
+    }
+
+    /* Estilo para elementos markdown */
+    .comment-message strong {
+      font-weight: bold;
+      color: #ffffff;
+    }
+    .comment-message em {
+      font-style: italic;
+      color: #b9bbbe;
+    }
+    .comment-message u {
+      text-decoration: underline;
+      color: #b9bbbe;
+    }
+    .comment-message code {
+      font-family: "Consolas", monospace;
+      background-color: #202225;
+      color: #f1f1f1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- (seu conteúdo principal está intacto) -->
     <div id="alert-box"></div>
     <h2>Comentários</h2>
     <div id="user-info-section">
