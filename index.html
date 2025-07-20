@@ -274,30 +274,66 @@
         color: #f04747;
     }
 
-        .mention-suggestions {
-      position: absolute;
-      z-index: 999;
-      background: white;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      max-height: 200px;
-      overflow-y: auto;
-      display: none;
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      font-size: 14px;
-      color: black;
-    }
-    .mention-suggestions li {
-      padding: 6px 10px;
-      cursor: pointer;
-    }
-    .mention-suggestions li:hover,
-    .mention-suggestions li.active {
-      background-color: #007bff;
-      color: white;
-    }
+        /* Sugestão estilo Discord ao digitar @nome */
+#mention-suggestions {
+  position: absolute;
+  background-color: #2f3136;
+  border: 1px solid #202225;
+  border-radius: 5px;
+  max-height: 200px;
+  overflow-y: auto;
+  width: 100%;
+  margin-top: 5px;
+  z-index: 999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  list-style: none;
+  padding: 4px 0;
+  display: none;
+}
+
+#mention-suggestions li {
+  padding: 8px 12px;
+  cursor: pointer;
+  color: #dcddde;
+}
+
+#mention-suggestions li:hover,
+#mention-suggestions li.active {
+  background-color: #4f545c;
+  color: #ffffff;
+}
+
+/* Estilo das menções dentro do comentário */
+.mention {
+  color: #00aff4;
+  font-weight: bold;
+  background-color: rgba(0, 170, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Estilo para elementos markdown */
+.comment-message strong {
+  font-weight: bold;
+  color: #ffffff;
+}
+.comment-message em {
+  font-style: italic;
+  color: #b9bbbe;
+}
+.comment-message u {
+  text-decoration: underline;
+  color: #b9bbbe;
+}
+.comment-message code {
+  font-family: "Consolas", monospace;
+  background-color: #202225;
+  color: #f1f1f1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
     
   </style>
 </head>
@@ -323,7 +359,8 @@
           <button type="button" class="cancel-reply-btn">X</button>
       </div>
       <textarea id="message" placeholder="Seu comentário" required rows="3"></textarea>
-      <ul id="mention-suggestions" class="mention-suggestions"></ul>
+      <ul id="mention-suggestions"></ul>
+      
       <button type="submit">Enviar</button>
     </form>
     <div id="comments"></div>
