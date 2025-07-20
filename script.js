@@ -485,3 +485,49 @@ function renderMessage(text) {
 
   return html;
 }
+
+const mentionBox = document.getElementById("mention-suggestions");
+
+messageInput.addEventListener("input", async (e) => {
+  const cursorPos = messageInput.selectionStart;
+  const textBeforeCursor = messageInput.value.substring(0, cursorPos);
+  const match = textBeforeCursor.match(/@(\w*)$/);
+
+  if (match) {
+    const prefix = match[1].toLowerCase();
+    const suggestions = Object.keys(onlineUsersMap).filter(name =>
+      name.toLowerCase().startsWith(prefix)
+    );
+
+    if (suggestions.length === 0) {
+      mentionBox.style.display = "none";
+      return;
+    }
+
+    mentionBox.innerHTML = suggestions.map(name => `<li>${name}</li>`).join("");
+    const rect = messageInput.getBoundingClientRect();
+    mentionBox.style.left = `${rect.left + window.scrollX}px`;
+    mentionBox.style.top = `${rect.bottom + window.scrollY}px`;
+    mentionBox.style.width = `${rect.width}px`;
+    mentionBox.style.display = "block";
+
+    Array.from(mentionBox.querySelectorAll("li")).forEach(li => {
+      li.addEventListener("click", () => {
+        const newText = messageInput.value.substring(0, cursorPos).replace(/@(\w*)$/, `@${li.textContent} `) +
+                        messageInput.value.substring(cursorPos);
+        messageInput.value = newText;
+        messageInput.focus();
+        mentionBox.style.display = "none";
+      });
+    });
+
+  } else {
+    mentionBox.style.display = "none";
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (!mentionBox.contains(e.target)) {
+    mentionBox.style.display = "none";
+  }
+});
