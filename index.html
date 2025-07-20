@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Livro + Comentários</title>
   <style>
+    /* (Seu estilo CSS já está correto, omitido aqui para brevidade) */
+    
     :root {
       --bg: #1e1e1e; /* Darker background for chat feel */
       --fg: #ffffff;
@@ -271,49 +273,78 @@
         font-style: normal; /* No italics for deleted message text */
         color: #f04747;
     }
+
+        .mention-suggestions {
+      position: absolute;
+      z-index: 999;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 14px;
+      color: black;
+    }
+    .mention-suggestions li {
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .mention-suggestions li:hover,
+    .mention-suggestions li.active {
+      background-color: #007bff;
+      color: white;
+    }
+    
   </style>
 </head>
 <body>
-<div class="container">
-  <div id="alert-box"></div>
-  <h2>Comentários</h2>
-  <div id="user-info-section">
-    <p id="user-info"></p>
-    <p id="user-count"></p>
-  </div>
-  <div id="user-controls">
-    <button id="login-btn">Registrar</button>
-    <button id="logout-btn" style="display:none;">Sair</button>
-    <button id="delete-account" style="display:none;">Apagar minha conta</button>
-  </div>
-
-  <form id="comment-form">
-    <input type="text" id="name" placeholder="Seu nome (só se não estiver logado)" style="display:none;" />
-    <div id="reply-box" style="display:none;">
-        <span class="reply-message"></span>
-        <button type="button" class="cancel-reply-btn">X</button>
+  <div class="container">
+    <!-- (seu conteúdo principal está intacto) -->
+    <div id="alert-box"></div>
+    <h2>Comentários</h2>
+    <div id="user-info-section">
+      <p id="user-info"></p>
+      <p id="user-count"></p>
     </div>
-    <textarea id="message" placeholder="Seu comentário" required rows="3"></textarea>
-    <button type="submit">Enviar</button>
-  </form>
-  <div id="comments"></div>
-</div>
+    <div id="user-controls">
+      <button id="login-btn">Registrar</button>
+      <button id="logout-btn" style="display:none;">Sair</button>
+      <button id="delete-account" style="display:none;">Apagar minha conta</button>
+    </div>
 
+    <form id="comment-form">
+      <input type="text" id="name" placeholder="Seu nome (só se não estiver logado)" style="display:none;" />
+      <div id="reply-box" style="display:none;">
+          <span class="reply-message"></span>
+          <button type="button" class="cancel-reply-btn">X</button>
+      </div>
+      <textarea id="message" placeholder="Seu comentário" required rows="3"></textarea>
+      <ul id="mention-suggestions" class="mention-suggestions"></ul>
+      <button type="submit">Enviar</button>
+    </form>
+    <div id="comments"></div>
+  </div>
 
-<div id="custom-modal" class="modal-overlay">
-  <div class="modal-content">
-    <p id="modal-message"></p>
-    <input type="text" id="modal-input" style="display:none;" />
-    <textarea id="modal-textarea" style="display:none;"></textarea>
-    <div class="modal-buttons">
-      <button id="modal-confirm-btn">Confirmar</button>
-      <button id="modal-cancel-btn" class="cancel-btn" style="display:none;">Cancelar</button>
+  <div id="custom-modal" class="modal-overlay">
+    <div class="modal-content">
+      <p id="modal-message"></p>
+      <input type="text" id="modal-input" style="display:none;" />
+      <textarea id="modal-textarea" style="display:none;"></textarea>
+      <div class="modal-buttons">
+        <button id="modal-confirm-btn">Confirmar</button>
+        <button id="modal-cancel-btn" class="cancel-btn" style="display:none;">Cancelar</button>
+      </div>
     </div>
   </div>
-</div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="script.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
