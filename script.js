@@ -45,6 +45,11 @@ const cancelReplyBtn = replyBox.querySelector(".cancel-reply-btn");
 let replyToCommentId = null;
 let replyToAuthorName = null;
 
+// Variáveis para garantir que dados essenciais estejam carregados
+let allUsersMap = {}; // Armazena { lowercaseName: { name: originalName, uid: uid } }
+let currentLoggedInUserUid = null;
+let currentLoggedInUserName = null;
+
 function showAlert(msg, isError = false) {
     alertBox.textContent = msg;
     alertBox.style.display = "block";
@@ -149,7 +154,7 @@ logoutBtn.addEventListener("click", () => {
     if (user) {
         onlineRef.child(user.uid).remove(); // Remove o status online
         auth.signOut().then(() => {
-            // REMOVIDO: location.reload(); para dinamismo
+            // Não recarrega, a função onAuthStateChanged vai lidar com a interface
         }).catch(error => {
             showAlert(`Erro ao sair: ${error.message}`, true);
         });
@@ -188,7 +193,7 @@ deleteBtn.addEventListener("click", async () => {
         await user.delete();
 
         showAlert("Conta apagada com sucesso. Você foi desconectado.");
-        // REMOVIDO: location.reload(); para dinamismo
+        // Não recarrega, a função onAuthStateChanged vai lidar com a interface
     } catch (error) {
         console.error("Erro ao apagar conta:", error);
         if (error.code === 'auth/requires-recent-login') {
@@ -203,7 +208,11 @@ deleteBtn.addEventListener("click", async () => {
     }
 });
 
+// Listener principal de autenticação
 auth.onAuthStateChanged(async user => {
+    currentLoggedInUserUid = user ? user.uid : null;
+    currentLoggedInUserName = null; // Resetar nome
+
     if (user) {
         loginBtn.style.display = "none";
         logoutBtn.style.display = "inline-block";
@@ -242,9 +251,11 @@ auth.onAuthStateChanged(async user => {
             nick = nameSnap.val();
         }
 
+        currentLoggedInUserName = nick; // Armazena o nome do usuário logado
         userInfo.innerHTML = `👤 Logado como: <strong>${nick}</strong>`;
         onlineRef.child(user.uid).set(true);
         onlineRef.child(user.uid).onDisconnect().remove();
+
     } else {
         loginBtn.textContent = "Registrar ou Fazer Login";
         loginBtn.style.display = "inline-block";
@@ -253,7 +264,15 @@ auth.onAuthStateChanged(async user => {
         userInfo.innerHTML = "Faça login para comentar.";
         nameInput.style.display = "inline-block"; // Show name input if not logged in
     }
+
+    // Após a autenticação e definição do UID do usuário logado,
+    // garantimos que os nomes de usuário estejam carregados antes de re-renderizar.
+    // O namesRef.on("value") já lida com o renderAllComments().
+    // Se namesRef ainda não disparou, ele o fará e então renderizará.
+    // Se já disparou, renderAllComments() será chamado novamente, com o userUid correto.
+    renderAllComments(); 
 });
+
 
 form.addEventListener("submit", async e => {
     e.preventDefault();
@@ -294,10 +313,11 @@ form.addEventListener("submit", async e => {
     }
 });
 
+// Listener de comentários
 commentsRef.on("value", async snapshot => {
     commentsDiv.innerHTML = "";
-    const user = auth.currentUser;
-    const isAdmin = user && user.uid === ADMIN_UID;
+    // currentLoggedInUserUid já está sendo definido pelo auth.onAuthStateChanged
+    // e allUsersMap pelo namesRef.on("value")
 
     const commentsArray = [];
     snapshot.forEach(child => {
@@ -332,11 +352,12 @@ commentsRef.on("value", async snapshot => {
         return { ...c, replyToHtml: replyToHtml };
     }));
 
-    for (const c of commentsWithReplyData) { // Loop through the new array with replyHtml
+    // Renderiza cada comentário. Agora, passando o UID do usuário logado para renderMessage.
+    for (const c of commentsWithReplyData) {
         const div = document.createElement("div");
         div.className = "comment";
 
-        if (user && user.uid === c.uid) {
+        if (currentLoggedInUserUid && currentLoggedInUserUid === c.uid) {
             div.classList.add("own");
         }
         if (c.uid === ADMIN_UID) {
@@ -346,13 +367,12 @@ commentsRef.on("value", async snapshot => {
         const date = new Date(c.timestamp);
         const dataFormatada = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
-        // Use the pre-fetched replyToHtml
         div.innerHTML = `
             <div class="comment-header">
                 <span class="comment-author">${c.name}</span>
                 <span class="comment-timestamp">(${dataFormatada})</span>
             </div>
-            ${c.replyToHtml} <div class="comment-message">${renderMessage(c.message)}</div>
+            ${c.replyToHtml} <div class="comment-message">${renderMessage(c.message, c.uid, currentLoggedInUserUid)}</div>
         `;
 
         const actionsDiv = document.createElement("div");
@@ -365,7 +385,7 @@ commentsRef.on("value", async snapshot => {
         };
         actionsDiv.append(replyBtn);
 
-        if (user && user.uid === c.uid) {
+        if (currentLoggedInUserUid && currentLoggedInUserUid === c.uid) { // Usar currentLoggedInUserUid
             const editBtn = document.createElement("button");
             editBtn.textContent = "Editar";
             editBtn.onclick = async () => {
@@ -393,7 +413,8 @@ commentsRef.on("value", async snapshot => {
             actionsDiv.append(editBtn, deleteOwnBtn);
         }
 
-        if (isAdmin && c.uid !== ADMIN_UID) {
+        // Ação de admin para banir/apagar (apenas se o admin estiver logado e não for o próprio admin)
+        if (currentLoggedInUserUid === ADMIN_UID && c.uid !== ADMIN_UID) {
             const adminBox = document.createElement("div");
             adminBox.className = "admin-buttons";
 
@@ -437,9 +458,8 @@ commentsRef.on("value", async snapshot => {
 });
 
 // Carrega todos os nomes registrados no sistema para aplicar menções
-let allUsersMap = {};
 namesRef.on("value", async snap => {
-    allUsersMap = {};
+    allUsersMap = {}; // Resetar mapa para garantir que esteja atualizado
 
     snap.forEach(child => {
         const uid = child.key;
@@ -448,11 +468,21 @@ namesRef.on("value", async snap => {
     });
 
     // Re-renderiza os comentários com menções estilizadas (após atualização do mapa)
+    // Isso é crucial para que a exibição das menções seja atualizada se o mapa de usuários mudar
     renderAllComments();
 });
 
-// Função para aplicar markdown simples (negrito, itálico, sublinhado)
-function renderMessage(text) {
+// A função renderAllComments agora não precisa do .once("value")
+// Apenas a chama. O listener commentsRef.on("value") fará o resto.
+function renderAllComments() {
+    // Apenas força uma re-avaliação do listener principal de comentários.
+    // Isso é útil para garantir que o render é disparado após allUsersMap ser atualizado
+    // ou o estado de autenticação ser definido.
+    commentsRef.once("value"); 
+}
+
+// Função para aplicar markdown e menções condicionalmente
+function renderMessage(text, authorUid, currentLoggedInUserUid) {
     if (!text) return "";
 
     // Aplica Markdown completo com marked.js
@@ -461,12 +491,27 @@ function renderMessage(text) {
     // Substitui @menções por spans personalizados
     html = html.replace(/@(\w{1,20})/g, (match, username) => {
         const lowerCaseUsername = username.toLowerCase();
+        
         if (allUsersMap[lowerCaseUsername]) {
-            const mentionedUserUid = allUsersMap[lowerCaseUsername].uid;
-            // Se o usuário mencionado é o admin, adiciona a classe admin-mention
-            const mentionClass = (mentionedUserUid === ADMIN_UID) ? "mention admin-mention" : "mention";
-            return `<span class="${mentionClass}">@${username}</span>`;
+            const mentionedUser = allUsersMap[lowerCaseUsername];
+            const mentionedUserUid = mentionedUser.uid;
+
+            // Condição para aplicar o estilo:
+            // 1. O usuário logado é o autor da mensagem que contém a menção OU
+            // 2. O usuário logado é o usuário que foi mencionado
+            const shouldApplyPersonalStyle = (currentLoggedInUserUid && (currentLoggedInUserUid === authorUid || currentLoggedInUserUid === mentionedUserUid));
+
+            if (shouldApplyPersonalStyle) {
+                let mentionClasses = "personal-mention"; // Classe base para menções pessoais
+
+                // Se o usuário mencionado é o admin, adiciona a classe admin-mention
+                if (mentionedUserUid === ADMIN_UID) {
+                    mentionClasses += " admin-mention";
+                }
+                return `<span class="${mentionClasses}">@${username}</span>`;
+            }
         }
+        // Se a condição não for atendida, retorna o match original sem estilo
         return match;
     });
 
@@ -520,9 +565,8 @@ document.addEventListener("click", (e) => {
     }
 });
 
-function renderAllComments() {
-    commentsRef.once("value", snapshot => {
-        // Isso vai disparar o `commentsRef.on("value")` principal novamente,
-        // que por sua vez re-renderizará os comentários usando o `allUsersMap` atualizado.
-    });
-}
+// Inicializa a renderização quando os dados de nomes de usuário estiverem prontos.
+// Isso ajuda a prevenir a race condition no primeiro carregamento.
+// O renderAllComments() já está sendo chamado dentro do namesRef.on("value")
+// e também no auth.onAuthStateChanged para garantir que a interface seja atualizada
+// com o contexto correto do usuário logado e os nomes disponíveis.
