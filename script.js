@@ -470,20 +470,18 @@ function parseMentions(text) {
 
 // Função para aplicar markdown simples (negrito, itálico, sublinhado)
 function renderMessage(text) {
-  let html = text
-    .replace(/&/g, "&amp;") // Sanitize
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  if (!text) return "";
 
-  // Markdown básico
-  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
-  html = html.replace(/__(.*?)__/g, "<u>$1</u>");
-  html = html.replace(/`(.*?)`/g, "<code>$1</code>");
-  html = html.replace(/\n/g, "<br>"); // Line breaks
+  // Aplica Markdown completo com marked.js
+  let html = marked.parse(text);
 
-  // Menções
-  html = parseMentions(html);
+  // Substitui @menções por spans personalizados
+  html = html.replace(/@(\w{1,20})/g, (match, username) => {
+    if (onlineUsersMap[username]) {
+      return `<span class="mention">@${username}</span>`;
+    }
+    return match;
+  });
 
   return html;
 }
