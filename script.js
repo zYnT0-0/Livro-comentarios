@@ -439,10 +439,9 @@ const firebaseConfig = {
     }
   });
 
-  onlineRef.on("value", snap => {
-    userCount.textContent = `👥 Usuários online: ${snap.numChildren()}`;
-  });
+  
 
+// Salva os nomes online para referência nas menções
 // Salva os nomes online para referência nas menções
 // Salva os nomes online para referência nas menções
 let onlineUsersMap = {};
@@ -458,10 +457,8 @@ onlineRef.on("value", async snap => {
     }
   }
 
-  // ✅ Recarrega os comentários com as menções estilizadas após popular o mapa
-  commentsRef.once("value", snapshot => {
-    commentsRef.emit("value", snapshot); // força a reemissão do evento
-  });
+  // ✅ Recarrega todos os comentários após o mapa de usuários online estar pronto
+  renderAllComments();
 });
 
 // Função para transformar @nomes em spans destacados
@@ -537,3 +534,134 @@ document.addEventListener("click", (e) => {
     mentionBox.style.display = "none";
   }
 });
+
+function renderAllComments() {
+  commentsRef.once("value").then(snapshot => {
+    commentsRef.off("value");
+    commentsRef.on("value", async snapshot => {
+      commentsDiv.innerHTML = "";
+      const user = auth.currentUser;
+      const isAdmin = user && user.uid === ADMIN_UID;
+
+      const commentsArray = [];
+      snapshot.forEach(child => {
+        commentsArray.push({ key: child.key, ...child.val() });
+      });
+
+      commentsArray.sort((a, b) => a.timestamp - b.timestamp);
+
+      const commentsWithReplyData = await Promise.all(commentsArray.map(async (c) => {
+        let replyToHtml = '';
+        if (c.replyToId && c.replyToAuthor) {
+          const originalCommentSnap = await commentsRef.child(c.replyToId).once("value");
+          if (originalCommentSnap.exists()) {
+            const originalComment = originalCommentSnap.val();
+            const originalMessageSnippet = originalComment.message.substring(0, 80) + (originalComment.message.length > 80 ? '...' : '');
+            replyToHtml = `
+              <div class="comment-reply-block">
+                <span class="reply-block-author">${originalComment.name}</span>
+                <span class="reply-block-message">${originalMessageSnippet}</span>
+              </div>`;
+          } else {
+            replyToHtml = `
+              <div class="comment-reply-block comment-reply-deleted">
+                <span class="reply-block-message">[Mensagem original apagada]</span>
+              </div>`;
+          }
+        }
+        return { ...c, replyToHtml: replyToHtml };
+      }));
+
+      for (const c of commentsWithReplyData) {
+        const div = document.createElement("div");
+        div.className = "comment";
+        if (user && user.uid === c.uid) div.classList.add("own");
+        if (c.uid === ADMIN_UID) div.classList.add("admin");
+
+        const date = new Date(c.timestamp);
+        const dataFormatada = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+        div.innerHTML = `
+          <div class="comment-header">
+            <span class="comment-author">${c.name}</span>
+            <span class="comment-timestamp">(${dataFormatada})</span>
+          </div>
+          ${c.replyToHtml} <div class="comment-message">${renderMessage(c.message)}</div>
+        `;
+
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "comment-actions";
+
+        const replyBtn = document.createElement("button");
+        replyBtn.textContent = "Responder";
+        replyBtn.onclick = () => startReply(c.key, c.name);
+        actionsDiv.append(replyBtn);
+
+        if (user && user.uid === c.uid) {
+          const editBtn = document.createElement("button");
+          editBtn.textContent = "Editar";
+          editBtn.onclick = async () => {
+            const novoTexto = await showCustomPrompt("Edite sua mensagem:", "textarea", c.message);
+            if (novoTexto !== null && novoTexto.trim() !== "") {
+              commentsRef.child(c.key).update({ message: novoTexto });
+            } else if (novoTexto !== null) {
+              showAlert("Mensagem não pode ser vazia.", true);
+            }
+          };
+
+          const deleteOwnBtn = document.createElement("button");
+          deleteOwnBtn.textContent = "Apagar Mensagem";
+          deleteOwnBtn.onclick = async () => {
+            const confirmDelete = await showCustomPrompt("Tem certeza que deseja apagar esta mensagem?", "text", "sim");
+            if (confirmDelete === "sim") {
+              commentsRef.child(c.key).remove();
+              showAlert("Mensagem apagada.");
+            } else {
+              showAlert("Operação cancelada.", true);
+            }
+          };
+          actionsDiv.append(editBtn, deleteOwnBtn);
+        }
+
+        if (isAdmin && c.uid !== ADMIN_UID) {
+          const adminBox = document.createElement("div");
+          adminBox.className = "admin-buttons";
+
+          const del = document.createElement("button");
+          del.textContent = "🗑️ Apagar";
+          del.onclick = async () => {
+            const confirmDel = await showCustomPrompt("Tem certeza que deseja apagar esta mensagem?", "text", "sim");
+            if (confirmDel === "sim") {
+              commentsRef.child(c.key).remove();
+              showAlert("Mensagem apagada pelo admin.");
+            } else {
+              showAlert("Operação cancelada.", true);
+            }
+          };
+
+          const ban = document.createElement("button");
+          ban.textContent = "🚫 Banir Usuário";
+          ban.onclick = async () => {
+            const confirmBan = await showCustomPrompt(`Tem certeza que deseja banir ${c.name}?`, "text", "sim");
+            if (confirmBan === "sim") {
+              bannedRef.child(c.uid).set(true);
+              await showCustomAlert(`${c.name} foi banido.`);
+              await commentsRef.orderByChild("uid").equalTo(c.uid).once("value", snapshot => {
+                snapshot.forEach(child => child.ref.remove());
+              });
+              onlineRef.child(c.uid).remove();
+            } else {
+              showAlert("Operação cancelada.", true);
+            }
+          };
+
+          adminBox.append(del, ban);
+          actionsDiv.appendChild(adminBox);
+        }
+
+        if (actionsDiv.children.length > 0) div.appendChild(actionsDiv);
+        commentsDiv.appendChild(div);
+      }
+    });
+  });
+}
