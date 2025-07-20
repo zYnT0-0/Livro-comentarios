@@ -18,7 +18,7 @@ const bannedRef = db.ref("banidos");
 
 const ADMIN_UID = "mIsJ6CcuSQdk8VkWayuekdMcn7L2"; // SUBSTITUA PELO SEU UID DE ADMIN REAL
 // AQUI VOCÊ DEVE ADICIONAR A URL DA IMAGEM DO ÍCONE DO ADMIN
-const ADMIN_ICON_URL = 'CAMINHO/DA/SUA/IMAGEM.png'; // <---- SUBSTITUA ESTE VALOR PELA URL REAL DA SUA IMAGEM (ex: 'assets/admin_icon.png')
+const ADMIN_ICON_URL = 'adm-icon.png'; // <---- SUBSTITUA ESTE VALOR PELA URL REAL DA SUA IMAGEM (ex: 'assets/admin_icon.png')
 
 const loginBtn = document.getElementById("login-btn");
 const logoutBtn = document.getElementById("logout-btn");
