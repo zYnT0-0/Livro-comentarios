@@ -444,6 +444,7 @@ const firebaseConfig = {
   });
 
 // Salva os nomes online para referência nas menções
+// Salva os nomes online para referência nas menções
 let onlineUsersMap = {};
 onlineRef.on("value", async snap => {
   userCount.textContent = `👥 Usuários online: ${snap.numChildren()}`;
@@ -456,6 +457,11 @@ onlineRef.on("value", async snap => {
       onlineUsersMap[nameSnap.val()] = uid;
     }
   }
+
+  // ✅ Recarrega os comentários com as menções estilizadas após popular o mapa
+  commentsRef.once("value", snapshot => {
+    commentsRef.emit("value", snapshot); // força a reemissão do evento
+  });
 });
 
 // Função para transformar @nomes em spans destacados
