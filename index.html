@@ -5,431 +5,369 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Livro + Comentários</title>
   <style>
-    :root {
-      --bg: #1e1e1e; /* Darker background for chat feel */
-      --fg: #ffffff;
-      --accent: #5865f2; /* Azul mais forte */
-      --border: #36393f; /* Darker border for chat feel */
-      --comment-bg: #36393f; /* Discord dark grey for comments */
-      --comment-own-bg: #4f545c; /* Slightly lighter grey for own comments */
-      --admin-bg: #3b3f4a; /* Admin comments também com o azul mais forte */
-      --input-bg: #40444b;
-      --button-hover: #4752c4; /* Ajuste para o hover do botão */
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Discord font stack */
-      background: var(--bg);
-      color: var(--fg);
-      padding: 20px;
-      margin: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-    .container {
-      max-width: 700px; /* Slightly wider for chat layout */
-      width: 100%;
-      margin: auto;
-      background: #2f3136; /* Discord main background */
-      padding: 30px;
-      border-radius: 8px; /* Slightly less rounded */
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-    h2 {
-      text-align: center;
-      color: var(--fg);
-      margin-bottom: 20px;
-    }
-    #user-controls {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 10px;
-      flex-wrap: wrap; /* Allow wrapping on smaller screens */
-    }
-    #comment-form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 10px; /* Less margin */
-    }
-    #comment-form input,
-    #comment-form textarea {
-      padding: 12px;
-      background: var(--input-bg);
-      border: 1px solid var(--border);
-      color: var(--fg);
-      border-radius: 5px;
-      resize: vertical; /* Allow vertical resize for textarea */
-    }
-    button {
-      padding: 10px 15px; /* More balanced padding */
-      background: var(--accent);
-      border: none;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background-color 0.2s ease;
-    }
-    button:hover {
-      background-color: var(--button-hover);
-    }
-    #comments {
-      margin-top: 20px;
-      display: flex;
-      flex-direction: column-reverse; /* Newest comments at the bottom (like chat) */
-      gap: 15px; /* Spacing between chat messages */
-    }
-    .comment {
-      background: var(--comment-bg);
-      border: none; /* No border for chat look */
-      padding: 12px 15px;
-      border-radius: 8px; /* Rounded message bubbles */
-      word-wrap: break-word; /* Ensure long words wrap */
-    }
-    .comment.own {
-      background: var(--comment-own-bg);
-    }
-    .comment.admin {
-      background: var(--admin-bg); /* Admin comments distinct */
-    }
-    .comment-header {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-      margin-bottom: 5px;
-    }
-    .comment-author {
-      font-weight: bold;
-      color: var(--accent); /* Author name in accent color */
-    }
-    .comment.admin .comment-author {
-      color: #c4c4ff; /* Um azul mais claro e vibrante para o nome do Admin */
-      text-shadow: 0 0 5px rgba(196, 196, 255, 0.5); /* Um brilho sutil */
-    }
-    .comment-timestamp {
-      font-size: 0.8em;
-      color: #b9bbbe; /* Um cinza mais claro para a data e hora */
-    }
-    .comment.admin .comment-timestamp {
-      color: #e0e0ff; /* Azul bem claro para a data e hora dos comentários do Admin */
-    }
-    .comment-message {
-      margin-top: 5px;
-      white-space: pre-wrap; /* Preserve whitespace and line breaks */
-    }
-    .comment-actions {
-      margin-top: 8px;
-      display: flex;
-      gap: 8px; /* Spacing between action buttons */
-    }
-    .comment-actions button {
-      padding: 6px 10px; /* Smaller padding for action buttons */
-      font-size: 0.85em;
-    }
-    .admin-buttons {
-      margin-left: auto; /* Push admin buttons to the right */
-      display: flex;
-      gap: 8px;
-    }
-    .admin-buttons button {
-      background-color: #f04747; /* Red for delete/ban */
-    }
-    .admin-buttons button:hover {
-      background-color: #cc3a3a;
-    }
+    /* Variáveis para o tema escuro (padrão) */
+:root {
+    --bg-dark: #1e1e1e; /* Darker background for chat feel */
+    --fg-dark: #ffffff;
+    --accent-dark: #5865f2; /* Azul mais forte */
+    --border-dark: #36393f; /* Darker border for chat feel */
+    --comment-bg-dark: #36393f; /* Discord dark grey for comments */
+    --comment-own-bg-dark: #4f545c; /* Slightly lighter grey for own comments */
+    --admin-bg-dark: #3b3f4a; /* Admin comments com o azul mais forte */
+    --input-bg-dark: #40444b;
+    --button-hover-dark: #4752c4; /* Ajuste para o hover do botão */
+    --container-bg-dark: #2f3136;
+    --reply-block-bg-dark: #40444b;
+    --reply-block-message-dark: #b9bbbe;
+    --reply-highlight-bg-dark: #4a5a6b; /* Fundo azul mais escuro para destaque de resposta (para mim) */
+    --reply-highlight-border-dark: #4a90e2; /* Borda azul mais vibrante para destaque */
+}
 
-    /* Custom Modal/Alert Styling */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.7);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      display: none; /* Hidden by default */
-    }
-    .modal-content {
-      background: #36393f;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-      max-width: 450px;
-      width: 90%;
-      text-align: center;
-      color: var(--fg);
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .modal-content input, .modal-content textarea {
-      padding: 10px;
-      background: var(--input-bg);
-      border: 1px solid var(--border);
-      color: var(--fg);
-      border-radius: 5px;
-      width: 100%;
-    }
-    .modal-content .modal-buttons {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-    }
-    .modal-content .modal-buttons button {
-      flex: 1;
-      padding: 10px;
-    }
-    .modal-content .modal-buttons .cancel-btn {
-      background-color: #72767d;
-    }
-    .modal-content .modal-buttons .cancel-btn:hover {
-      background-color: #5d6067;
-    }
+/* Variáveis para o tema claro */
+body:not(.dark-mode) {
+    --bg: #f5f5f5; /* Fundo muito claro */
+    --fg: #333333; /* Texto escuro */
+    --accent: #007bff; /* Azul padrão do bootstrap para botões */
+    --border: #cccccc; /* Borda clara */
+    --comment-bg: #ffffff; /* Fundo branco para comentários */
+    --comment-own-bg: #e0f2f7; /* Azul bem clarinho para comentários próprios */
+    --admin-bg: #fff0f0; /* Vermelho muito claro para admin */
+    --input-bg: #ffffff;
+    --button-hover: #0056b3; /* Hover mais escuro para botões azuis */
+    --container-bg: #ffffff; /* Fundo do container branco */
+    --reply-block-bg: #e9ecef; /* Cinza claro para bloco de resposta */
+    --reply-block-message: #666666; /* Texto cinza escuro para snippet */
+    --reply-highlight-bg: #d4edda; /* Fundo verde claro para destaque de resposta (para mim) */
+    --reply-highlight-border: #28a745; /* Borda verde para destaque */
+}
 
-    #alert-box {
-      display: none;
-      background: #43b581; /* Discord green for success */
-      color: #fff;
-      border: none;
-      padding: 10px;
-      border-radius: 5px;
-      text-align: center;
-      font-weight: bold;
-      margin-bottom: 15px; /* Spacing below alert */
-    }
-    .error-alert {
-      background: #f04747 !important; /* Discord red for errors */
-    }
+/* Aplica variáveis do tema escuro por padrão ou quando a classe dark-mode está presente */
+body.dark-mode {
+    --bg: var(--bg-dark);
+    --fg: var(--fg-dark);
+    --accent: var(--accent-dark);
+    --border: var(--border-dark);
+    --comment-bg: var(--comment-bg-dark);
+    --comment-own-bg: var(--comment-own-bg-dark);
+    --admin-bg: var(--admin-bg-dark);
+    --input-bg: var(--input-bg-dark);
+    --button-hover: var(--button-hover-dark);
+    --container-bg: var(--container-bg-dark);
+    --reply-block-bg: var(--reply-block-bg-dark);
+    --reply-block-message: var(--reply-block-message-dark);
+    --reply-highlight-bg: var(--reply-highlight-bg-dark);
+    --reply-highlight-border: var(--reply-highlight-border-dark);
+}
 
-    /* --- Reply Box Styling (for composing a reply) --- */
-    #reply-box {
-        background-color: var(--comment-bg);
-        border-radius: 5px;
-        padding: 8px 12px;
-        margin-bottom: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.9em;
-        color: #b9bbbe;
-        border-left: 3px solid var(--accent); /* Indicate it's a reply context */
-    }
-    #reply-box .reply-message {
-        flex-grow: 1;
-    }
-    #reply-box .cancel-reply-btn {
-        background: none;
-        border: none;
-        color: #f04747; /* Red X */
-        font-size: 1.2em;
-        cursor: pointer;
-        padding: 0 5px;
-    }
-    #reply-box .cancel-reply-btn:hover {
-        color: #cc3a3a;
-    }
-    /* --- Styles for displaying a sent reply (quote block) --- */
-    .comment-reply-block {
-        background-color: #40444b; /* Slightly darker than comment-bg */
-        border-left: 4px solid var(--accent);
-        padding: 8px 12px;
-        border-radius: 5px;
-        margin-bottom: 10px; /* Space between quote and current message */
-        font-size: 0.9em;
-        color: #dcdcdc;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        max-width: 100%; /* Ensure it fits within parent */
-    }
-    .comment-reply-block .reply-block-author {
-        font-weight: bold;
-        color: var(--accent); /* Same accent color for author */
-    }
-    .comment-reply-block .reply-block-message {
-        font-style: italic;
-        color: #b9bbbe; /* Lighter grey for the message snippet */
-        overflow: hidden;
-        white-space: nowrap; /* Keep snippet on one line */
-        text-overflow: ellipsis; /* Add ellipsis if text is too long */
-    }
-    .comment-reply-block.comment-reply-deleted {
-        background-color: #5d6067; /* Different color for deleted reply */
-        border-left-color: #f04747; /* Red border for deleted */
-        color: #f04747; /* Text color for deleted message */
-    }
-    .comment-reply-block.comment-reply-deleted .reply-block-message {
-        font-style: normal; /* No italics for deleted message text */
-        color: #f04747;
-    }
+* { box-sizing: border-box; }
+body {
+    font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Discord font stack */
+    background: var(--bg);
+    color: var(--fg);
+    padding: 20px;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease; /* Transição suave para tema */
+}
+.container {
+    max-width: 700px; /* Slightly wider for chat layout */
+    width: 100%;
+    margin: auto;
+    background: var(--container-bg);
+    padding: 30px;
+    border-radius: 8px; /* Slightly less rounded */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+h2 {
+    text-align: center;
+    color: var(--fg);
+    margin-bottom: 20px;
+}
+#user-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+#comment-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px; /* Less margin */
+}
+#comment-form input,
+#comment-form textarea {
+    padding: 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    border-radius: 5px;
+    resize: vertical; /* Allow vertical resize for textarea */
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+button {
+    padding: 10px 15px; /* More balanced padding */
+    background: var(--accent);
+    border: none;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s ease;
+}
+button:hover {
+    background-color: var(--button-hover);
+}
+#comments {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column-reverse; /* Newest comments at the bottom (like chat) */
+    gap: 15px; /* Spacing between chat messages */
+}
+.comment {
+    background: var(--comment-bg);
+    border: none; /* No border for chat look */
+    padding: 12px 15px;
+    border-radius: 8px; /* Rounded message bubbles */
+    word-wrap: break-word; /* Ensure long words wrap */
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+.comment.own {
+    background: var(--comment-own-bg);
+}
+.comment.admin {
+    background: var(--admin-bg); /* Admin comments distinct */
+}
+.comment-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+.comment-author {
+    font-weight: bold;
+    color: var(--accent); /* Author name in accent color */
+}
+.comment.admin .comment-author {
+    color: #c4c4ff; /* Um azul mais claro e vibrante para o nome do Admin */
+    text-shadow: 0 0 5px rgba(196, 196, 255, 0.5); /* Um brilho sutil */
+}
+.comment-timestamp {
+    font-size: 0.8em;
+    color: #b9bbbe; /* Um cinza mais claro para a data e hora */
+}
+body:not(.dark-mode) .comment-timestamp {
+    color: #6c757d; /* Mais escuro para tema claro */
+}
+.comment.admin .comment-timestamp {
+    color: #e0e0ff; /* Azul bem claro para a data e hora dos comentários do Admin */
+}
+body:not(.dark-mode) .comment.admin .comment-timestamp {
+    color: #a0a0ff; /* Mais escuro para tema claro */
+}
+.comment-message {
+    margin-top: 5px;
+    white-space: pre-wrap; /* Preserve whitespace and line breaks */
+}
+.comment-actions {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px; /* Spacing between action buttons */
+}
+.comment-actions button {
+    padding: 6px 10px; /* Smaller padding for action buttons */
+    font-size: 0.85em;
+}
+.admin-buttons {
+    margin-left: auto; /* Push admin buttons to the right */
+    display: flex;
+    gap: 8px;
+}
+.admin-buttons button {
+    background-color: #f04747; /* Red for delete/ban */
+}
+.admin-buttons button:hover {
+    background-color: #cc3a3a;
+}
 
-    /* Sugestão estilo Discord ao digitar @nome (Mantido no CSS, mas removido do JS) */
-    #mention-suggestions {
-      position: absolute;
-      background-color: #2f3136;
-      border: 1px solid #202225;
-      border-radius: 5px;
-      max-height: 200px;
-      overflow-y: auto;
-      width: 100%;
-      margin-top: 5px;
-      z-index: 999;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-      font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      list-style: none;
-      padding: 4px 0;
-      display: none;
-    }
+/* Custom Modal/Alert Styling */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    display: none; /* Hidden by default */
+}
+.modal-content {
+    background: var(--container-bg); /* Usa a cor de fundo do container para o modal */
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    max-width: 450px;
+    width: 90%;
+    text-align: center;
+    color: var(--fg);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+.modal-content input, .modal-content textarea {
+    padding: 10px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    border-radius: 5px;
+    width: 100%;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+.modal-content .modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+.modal-content .modal-buttons button {
+    flex: 1;
+    padding: 10px;
+}
+.modal-content .modal-buttons .cancel-btn {
+    background-color: #72767d;
+}
+.modal-content .modal-buttons .cancel-btn:hover {
+    background-color: #5d6067;
+}
 
-    #mention-suggestions li {
-      padding: 8px 12px;
-      cursor: pointer;
-      color: #dcddde;
-    }
+#alert-box {
+    display: none;
+    background: #43b581; /* Discord green for success */
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 15px; /* Spacing below alert */
+}
+.error-alert {
+    background: #f04747 !important; /* Discord red for errors */
+}
 
-    #mention-suggestions li:hover,
-    #mention-suggestions li.active {
-      background-color: #4f545c;
-      color: #ffffff;
-    }
+/* --- Reply Box Styling (for composing a reply) --- */
+#reply-box {
+    background-color: var(--comment-bg);
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9em;
+    color: #b9bbbe;
+    border-left: 3px solid var(--accent); /* Indicate it's a reply context */
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+body:not(.dark-mode) #reply-box {
+    color: #6c757d;
+}
+#reply-box .reply-message {
+    flex-grow: 1;
+}
+#reply-box .cancel-reply-btn {
+    background: none;
+    border: none;
+    color: #f04747; /* Red X */
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 0 5px;
+}
+#reply-box .cancel-reply-btn:hover {
+    color: #cc3a3a;
+}
+/* --- Styles for displaying a sent reply (quote block) --- */
+.comment-reply-block {
+    background-color: var(--reply-block-bg); /* Usar variável de tema */
+    border-left: 4px solid var(--accent);
+    padding: 8px 12px;
+    border-radius: 5px;
+    margin-bottom: 10px; /* Space between quote and current message */
+    font-size: 0.9em;
+    color: var(--fg);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 100%; /* Ensure it fits within parent */
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+.comment-reply-block .reply-block-author {
+    font-weight: bold;
+    color: var(--accent); /* Same accent color for author */
+}
+.comment-reply-block .reply-block-message {
+    font-style: italic;
+    color: var(--reply-block-message); /* Usar variável de tema */
+    overflow: hidden;
+    white-space: nowrap; /* Keep snippet on one line */
+    text-overflow: ellipsis; /* Add ellipsis if text is too long */
+}
+.comment-reply-block.comment-reply-deleted {
+    background-color: #5d6067; /* Different color for deleted reply */
+    border-left-color: #f04747; /* Red border for deleted */
+    color: #f04747; /* Text color for deleted message */
+}
+body:not(.dark-mode) .comment-reply-block.comment-reply-deleted {
+    background-color: #f8d7da; /* Mais claro para deleted no tema claro */
+    color: #dc3545;
+}
+.comment-reply-block.comment-reply-deleted .reply-block-message {
+    font-style: normal; /* No italics for deleted message text */
+    color: #f04747;
+}
+body:not(.dark-mode) .comment-reply-block.comment-reply-deleted .reply-block-message {
+    color: #dc3545;
+}
 
-    /* Estilo de menção para o usuário logado (ele marcou ou foi marcado) (Mantido no CSS, mas removido do JS) */
-    .personal-mention {
-      color: #00aff4; /* Azul Discord padrão para menção */
-      font-weight: bold;
-      background-color: rgba(0, 170, 255, 0.1);
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
 
-    /* Estilo ESPECÍFICO para menções de ADMIN (sobrepõe o .personal-mention quando aplicável) (Mantido no CSS, mas removido do JS) */
-    .personal-mention.admin-mention {
-      color: #c4c4ff; /* Um azul mais claro e vibrante para o admin */
-      background-color: rgba(196, 196, 255, 0.15); /* Fundo um pouco diferente */
-      text-shadow: 0 0 3px rgba(196, 196, 255, 0.3); /* Um brilho sutil */
-    }
+/* ESTILO PARA QUEM RECEBEU A RESPOSTA (o background muda APENAS para ele) */
+.comment.is-reply-to-me {
+    background-color: var(--reply-highlight-bg);
+    border-left: 5px solid var(--reply-highlight-border);
+    padding-left: 15px;
+}
 
-    /* Estilo para elementos markdown */
-    .comment-message strong {
-      font-weight: bold;
-      color: #ffffff;
-    }
-    .comment-message em {
-      font-style: italic;
-      color: #b9bbbe;
-    }
-    .comment-message u {
-      text-decoration: underline;
-      color: #b9bbbe;
-    }
-    .comment-message code {
-      font-family: "Consolas", monospace;
-      background-color: #202225;
-      color: #f1f1f1;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 0.9em;
-    }
-    
-    /* Estilo para comentários que são respostas */
-    .comment.is-reply {
-        background-color: #3f4551; /* Um azul mais escuro sutil para destaque no dark mode */
-        border-left: 5px solid #007bff; /* Uma barra lateral azul */
-        padding-left: 15px; /* Ajuste para o padding após a barra */
-        margin-top: 10px; /* Um pouco de espaço extra */
-    }
-
-    /* Estilos para Modo Escuro */
-    body.dark-mode {
-        background-color: #2b2b2b; /* Fundo escuro */
-        color: #e0e0e0; /* Texto claro */
-    }
-
-    body.dark-mode .container {
-        background-color: #3c3c3c;
-        border: 1px solid #555;
-    }
-
-    body.dark-mode h1,
-    body.dark-mode h2 {
-        color: #f0f0f0;
-    }
-
-    body.dark-mode #user-info {
-        color: #d0d0d0;
-    }
-
-    body.dark-mode input[type="text"],
-    body.dark-mode textarea {
-        background-color: #4a4a4a;
-        color: #e0e0e0;
-        border: 1px solid #666;
-    }
-
-    body.dark-mode button,
-    body.dark-mode .theme-toggle-btn {
-        background-color: #555;
-        color: #fff;
-        border: none;
-    }
-
-    body.dark-mode button:hover,
-    body.dark-mode .theme-toggle-btn:hover {
-        background-color: #777;
-    }
-
-    body.dark-mode .comment {
-        background-color: #4a4a4a;
-        border: 1px solid #5a5a5a;
-    }
-
-    body.dark-mode .comment.own {
-        background-color: #505d6b; /* Mais escuro para próprios comentários */
-        border-color: #6a7a8a;
-    }
-
-    body.dark-mode .comment.admin {
-        background-color: #5a4b4b; /* Vermelho escuro para admin */
-        border-color: #7a5f5f;
-    }
-
-    /* Destaque de resposta no modo escuro (atualizado) */
-    body.dark-mode .comment.is-reply {
-        background-color: #4a5a6b; /* Um azul escuro para destaque no dark mode */
-        border-left: 5px solid #4a90e2; /* Azul mais vibrante */
-    }
-
-    /* Estilos do Modal no Modo Escuro */
-    body.dark-mode #custom-modal .modal-content {
-        background-color: #3a3a3a;
-        color: #e0e0e0;
-        border: 1px solid #555;
-    }
-
-    body.dark-mode #custom-modal input[type="text"],
-    body.dark-mode #custom-modal textarea {
-        background-color: #4a4a4a;
-        color: #e0e0e0;
-        border: 1px solid #666;
-    }
-
-    body.dark-mode #custom-modal button {
-        background-color: #555;
-        color: #fff;
-    }
-
-    body.dark-mode #custom-modal button:hover {
-        background-color: #777;
-    }
+/* Estilo para elementos markdown */
+.comment-message strong {
+    font-weight: bold;
+    color: var(--fg); /* Adapta-se ao tema */
+}
+.comment-message em {
+    font-style: italic;
+    color: var(--reply-block-message); /* Adapta-se ao tema, mais discreto */
+}
+.comment-message u {
+    text-decoration: underline;
+    color: var(--reply-block-message); /* Adapta-se ao tema, mais discreto */
+}
+.comment-message code {
+    font-family: "Consolas", monospace;
+    background-color: var(--border); /* Adapta-se ao tema */
+    color: var(--fg); /* Adapta-se ao tema */
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
   </style>
 </head>
 <body>
