@@ -82,7 +82,6 @@ if (themeToggle) {
     });
 }
 
-
 function showAlert(msg, isError = false) {
     alertBox.textContent = msg;
     alertBox.style.display = "block";
@@ -298,12 +297,15 @@ auth.onAuthStateChanged(async user => {
         nameInput.style.display = "inline-block"; // Show name input if not logged in
     }
 
-    // Após a autenticação e definição do UID do usuário logado,
-    // garantimos que os nomes de usuário estejam carregados antes de re-renderizar.
-    // O namesRef.on("value") já lida com o renderAllComments().
-    // Se namesRef ainda não disparou, ele o fará e então renderizará.
-    // Se já disparou, renderAllComments() será chamado novamente, com o userUid correto.
     renderAllComments();
+});
+
+// NOVO: Adiciona a funcionalidade de enviar mensagem com Enter
+messageInput.addEventListener("keydown", function(event) {
+    if (event.key === "Enter" && !event.shiftKey) { // Envia ao pressionar Enter, mas permite Shift+Enter para quebrar linha
+        event.preventDefault(); // Impede a quebra de linha padrão do Enter
+        form.dispatchEvent(new Event('submit')); // Dispara o evento de submit do formulário
+    }
 });
 
 
@@ -391,9 +393,11 @@ commentsRef.on("value", async snapshot => {
         div.className = "comment";
 
         // Adiciona classe para destaque de respostas GERAIS
-        if (c.replyToId) {
-            div.classList.add("is-reply");
-        }
+        // Removido o estilo is-reply geral para não ter fundo diferente para todos,
+        // apenas para quem a resposta é direcionada.
+        // if (c.replyToId) {
+        //     div.classList.add("is-reply");
+        // }
 
         // NOVO: Adiciona classe para destaque de resposta *se for para o usuário logado*
         if (currentLoggedInUserUid && c.replyToId && c.originalCommentAuthorUid === currentLoggedInUserUid) {
