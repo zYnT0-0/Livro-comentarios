@@ -33,7 +33,7 @@ const alertBox = document.getElementById("alert-box");
 const customModal = document.getElementById("custom-modal");
 const modalMessage = document.getElementById("modal-message");
 const modalInput = document.getElementById("modal-input");
-const modalTextarea = document.getElementById("modal-textarea");
+const modalTextarea = document = document.getElementById("modal-textarea");
 const modalConfirmBtn = document.getElementById("modal-confirm-btn");
 const modalCancelBtn = document.getElementById("modal-cancel-btn");
 
@@ -49,6 +49,37 @@ let replyToAuthorName = null;
 let allUsersMap = {}; // Armazena { lowercaseName: { name: originalName, uid: uid } }
 let currentLoggedInUserUid = null;
 let currentLoggedInUserName = null;
+
+// Elementos para Modo Escuro/Claro
+const themeToggle = document.getElementById("theme-toggle"); // Botão ou switch para alternar
+const body = document.body; // O elemento body para aplicar a classe do tema
+
+// Função para aplicar o tema salvo
+function applyTheme(theme) {
+    if (theme === 'dark') {
+        body.classList.add('dark-mode');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        body.classList.remove('dark-mode');
+        localStorage.setItem('theme', 'light');
+    }
+}
+
+// Verifica o tema salvo no localStorage ou define um padrão
+const savedTheme = localStorage.getItem('theme') || 'light';
+applyTheme(savedTheme);
+
+// Event listener para o botão de alternar tema
+if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+        if (body.classList.contains('dark-mode')) {
+            applyTheme('light');
+        } else {
+            applyTheme('dark');
+        }
+    });
+}
+
 
 function showAlert(msg, isError = false) {
     alertBox.textContent = msg;
@@ -270,7 +301,7 @@ auth.onAuthStateChanged(async user => {
     // O namesRef.on("value") já lida com o renderAllComments().
     // Se namesRef ainda não disparou, ele o fará e então renderizará.
     // Se já disparou, renderAllComments() será chamado novamente, com o userUid correto.
-    renderAllComments(); 
+    renderAllComments();
 });
 
 
@@ -357,7 +388,12 @@ commentsRef.on("value", async snapshot => {
         const div = document.createElement("div");
         div.className = "comment";
 
-        if (currentLoggedInUserUid && currentLoggedInUserUid === c.uid) {
+        // Adiciona classe para destaque de respostas
+        if (c.replyToId) {
+            div.classList.add("is-reply");
+        }
+
+        if (currentLoggedInUserUid && currentLoggedInUserUid === c.uid) { // Usar currentLoggedInUserUid
             div.classList.add("own");
         }
         if (c.uid === ADMIN_UID) {
@@ -464,6 +500,7 @@ namesRef.on("value", async snap => {
     snap.forEach(child => {
         const uid = child.key;
         const name = child.val();
+        // Não precisamos mais do allUsersMap para menções, mas mantemos para outras funcionalidades se existirem
         allUsersMap[name.toLowerCase()] = { name: name, uid: uid }; // Armazenar o nome original e o UID
     });
 
@@ -478,73 +515,65 @@ function renderAllComments() {
     // Apenas força uma re-avaliação do listener principal de comentários.
     // Isso é útil para garantir que o render é disparado após allUsersMap ser atualizado
     // ou o estado de autenticação ser definido.
-    commentsRef.once("value"); 
+    commentsRef.once("value");
 }
 
-// Função para aplicar markdown e menções condicionalmente
-// Função para aplicar markdown e menções condicionalmente
+// Função para aplicar markdown (menções removidas)
 function renderMessage(text, authorUid, currentLoggedInUserUid) {
     if (!text) return "";
-
     // Aplica Markdown completo com marked.js
     let html = marked.parse(text);
+    return html; // Retorna o HTML processado
+}
 
-    // console.log para depuração:
-    console.log("--- Processando Mensagem ---");
-    console.log("Mensagem original:", text);
-    console.log("Autor da mensagem (UID):", authorUid);
-    console.log("Usuário logado (UID):", currentLoggedInUserUid);
-    // Nota: allUsersMap pode ser grande, mostrarei apenas uma parte para não poluir demais o console
-    // Para ver o allUsersMap completo, você pode expandir no console do navegador
-    console.log("Conteúdo de allUsersMap (parcial, para contexto):", Object.keys(allUsersMap).slice(0, 5).map(key => `${key}: ${allUsersMap[key].name}`));
+const mentionBox = document.getElementById("mention-suggestions");
 
+// Removendo listener de menções se ele não for mais usado
+// Se você não for usar a funcionalidade de sugestão de menções, pode remover o bloco abaixo
+if (messageInput && mentionBox) { // Adicionado verificação para garantir que os elementos existem
+    messageInput.addEventListener("input", async (e) => {
+        const cursorPos = messageInput.selectionStart;
+        const textBeforeCursor = messageInput.value.substring(0, cursorPos);
+        const match = textBeforeCursor.match(/@(\w*)$/);
 
-    // Substitui @menções por spans personalizados
-    html = html.replace(/@(\w{1,20})/g, (match, username) => {
-        const lowerCaseUsername = username.toLowerCase();
-        
-        console.log("  Tentando processar menção:", match);
-        console.log("  Username capturado (original):", username);
-        console.log("  Username convertido para minúsculas:", lowerCaseUsername);
-        
-        if (allUsersMap[lowerCaseUsername]) {
-            const mentionedUser = allUsersMap[lowerCaseUsername];
-            const mentionedUserUid = mentionedUser.uid;
+        // Se você não quiser mais as sugestões, remova o if(match) e defina display none para mentionBox
+        if (match) {
+            const prefix = match[1].toLowerCase();
+            // Usa allUsersMap para sugerir todos os usuários registrados
+            const suggestions = Object.keys(allUsersMap)
+                .filter(nameKey => nameKey.startsWith(prefix))
+                .map(nameKey => allUsersMap[nameKey].name); // Retorna o nome original para a sugestão
 
-            console.log("  Usuário da menção ENCONTRADO no allUsersMap:", mentionedUser.name, "(UID:", mentionedUserUid + ")");
-
-            // Condição para aplicar o estilo:
-            // 1. O usuário logado é o autor da mensagem que contém a menção OU
-            // 2. O usuário logado é o usuário que foi mencionado
-            const shouldApplyPersonalStyle = (currentLoggedInUserUid && (currentLoggedInUserUid === authorUid || currentLoggedInUserUid === mentionedUserUid));
-
-            console.log("  Condição para aplicar estilo pessoal (currentLoggedInUserUid && (currentLoggedInUserUid === authorUid || currentLoggedInUserUid === mentionedUserUid)):", shouldApplyPersonalStyle);
-            console.log("    currentLoggedInUserUid:", currentLoggedInUserUid);
-            console.log("    authorUid (da mensagem):", authorUid);
-            console.log("    mentionedUserUid (da menção):", mentionedUserUid);
-            console.log("    currentLoggedInUserUid === authorUid?", currentLoggedInUserUid === authorUid);
-            console.log("    currentLoggedInUserUid === mentionedUserUid?", currentLoggedInUserUid === mentionedUserUid);
-
-
-            if (shouldApplyPersonalStyle) {
-                let mentionClasses = "personal-mention"; // Classe base para menções pessoais
-
-                // Se o usuário mencionado é o admin, adiciona a classe admin-mention
-                if (mentionedUserUid === ADMIN_UID) {
-                    mentionClasses += " admin-mention";
-                    console.log("  Adicionando classe admin-mention.");
-                }
-                console.log("  Menção estilizada aplicada com classes:", mentionClasses);
-                return `<span class="${mentionClasses}">@${username}</span>`;
-            } else {
-                console.log("  Menção NÃO estilizada (condição pessoal não atendida).");
+            if (suggestions.length === 0) {
+                mentionBox.style.display = "none";
+                return;
             }
+
+            mentionBox.innerHTML = suggestions.map(name => `<li>${name}</li>`).join("");
+            const rect = messageInput.getBoundingClientRect();
+            mentionBox.style.left = `${rect.left + window.scrollX}px`;
+            mentionBox.style.top = `${rect.bottom + window.scrollY}px`;
+            mentionBox.style.width = `${rect.width}px`;
+            mentionBox.style.display = "block";
+
+            Array.from(mentionBox.querySelectorAll("li")).forEach(li => {
+                li.addEventListener("click", () => {
+                    const newText = messageInput.value.substring(0, cursorPos).replace(/@(\w*)$/, `@${li.textContent} `) +
+                        messageInput.value.substring(cursorPos);
+                    messageInput.value = newText;
+                    messageInput.focus();
+                    mentionBox.style.display = "none";
+                });
+            });
+
         } else {
-            console.log("  Usuário da menção NÃO ENCONTRADO no allUsersMap para:", lowerCaseUsername);
+            mentionBox.style.display = "none";
         }
-        // Se a condição não for atendida, retorna o match original sem estilo
-        return match;
     });
 
-    return html; // Retorna o HTML processado
+    document.addEventListener("click", (e) => {
+        if (!mentionBox.contains(e.target)) {
+            mentionBox.style.display = "none";
+        }
+    });
 }
