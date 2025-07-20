@@ -272,7 +272,7 @@
         color: #f04747;
     }
 
-    /* Sugestão estilo Discord ao digitar @nome */
+    /* Sugestão estilo Discord ao digitar @nome (Mantido no CSS, mas removido do JS) */
     #mention-suggestions {
       position: absolute;
       background-color: #2f3136;
@@ -302,7 +302,7 @@
       color: #ffffff;
     }
 
-    /* Estilo de menção para o usuário logado (ele marcou ou foi marcado) */
+    /* Estilo de menção para o usuário logado (ele marcou ou foi marcado) (Mantido no CSS, mas removido do JS) */
     .personal-mention {
       color: #00aff4; /* Azul Discord padrão para menção */
       font-weight: bold;
@@ -311,7 +311,7 @@
       border-radius: 4px;
     }
 
-    /* Estilo ESPECÍFICO para menções de ADMIN (sobrepõe o .personal-mention quando aplicável) */
+    /* Estilo ESPECÍFICO para menções de ADMIN (sobrepõe o .personal-mention quando aplicável) (Mantido no CSS, mas removido do JS) */
     .personal-mention.admin-mention {
       color: #c4c4ff; /* Um azul mais claro e vibrante para o admin */
       background-color: rgba(196, 196, 255, 0.15); /* Fundo um pouco diferente */
@@ -339,6 +339,97 @@
       border-radius: 4px;
       font-size: 0.9em;
     }
+    
+    /* Estilo para comentários que são respostas */
+    .comment.is-reply {
+        background-color: #3f4551; /* Um azul mais escuro sutil para destaque no dark mode */
+        border-left: 5px solid #007bff; /* Uma barra lateral azul */
+        padding-left: 15px; /* Ajuste para o padding após a barra */
+        margin-top: 10px; /* Um pouco de espaço extra */
+    }
+
+    /* Estilos para Modo Escuro */
+    body.dark-mode {
+        background-color: #2b2b2b; /* Fundo escuro */
+        color: #e0e0e0; /* Texto claro */
+    }
+
+    body.dark-mode .container {
+        background-color: #3c3c3c;
+        border: 1px solid #555;
+    }
+
+    body.dark-mode h1,
+    body.dark-mode h2 {
+        color: #f0f0f0;
+    }
+
+    body.dark-mode #user-info {
+        color: #d0d0d0;
+    }
+
+    body.dark-mode input[type="text"],
+    body.dark-mode textarea {
+        background-color: #4a4a4a;
+        color: #e0e0e0;
+        border: 1px solid #666;
+    }
+
+    body.dark-mode button,
+    body.dark-mode .theme-toggle-btn {
+        background-color: #555;
+        color: #fff;
+        border: none;
+    }
+
+    body.dark-mode button:hover,
+    body.dark-mode .theme-toggle-btn:hover {
+        background-color: #777;
+    }
+
+    body.dark-mode .comment {
+        background-color: #4a4a4a;
+        border: 1px solid #5a5a5a;
+    }
+
+    body.dark-mode .comment.own {
+        background-color: #505d6b; /* Mais escuro para próprios comentários */
+        border-color: #6a7a8a;
+    }
+
+    body.dark-mode .comment.admin {
+        background-color: #5a4b4b; /* Vermelho escuro para admin */
+        border-color: #7a5f5f;
+    }
+
+    /* Destaque de resposta no modo escuro (atualizado) */
+    body.dark-mode .comment.is-reply {
+        background-color: #4a5a6b; /* Um azul escuro para destaque no dark mode */
+        border-left: 5px solid #4a90e2; /* Azul mais vibrante */
+    }
+
+    /* Estilos do Modal no Modo Escuro */
+    body.dark-mode #custom-modal .modal-content {
+        background-color: #3a3a3a;
+        color: #e0e0e0;
+        border: 1px solid #555;
+    }
+
+    body.dark-mode #custom-modal input[type="text"],
+    body.dark-mode #custom-modal textarea {
+        background-color: #4a4a4a;
+        color: #e0e0e0;
+        border: 1px solid #666;
+    }
+
+    body.dark-mode #custom-modal button {
+        background-color: #555;
+        color: #fff;
+    }
+
+    body.dark-mode #custom-modal button:hover {
+        background-color: #777;
+    }
   </style>
 </head>
 <body>
@@ -353,6 +444,7 @@
       <button id="login-btn">Registrar</button>
       <button id="logout-btn" style="display:none;">Sair</button>
       <button id="delete-account" style="display:none;">Apagar minha conta</button>
+      <button id="theme-toggle" class="theme-toggle-btn">Mudar Tema</button>
     </div>
 
     <form id="comment-form">
