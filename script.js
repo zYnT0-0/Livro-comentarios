@@ -6,9 +6,9 @@ const firebaseConfig = {
   authDomain: "comentarios-livro.firebaseapp.com",
   databaseURL: "https://comentarios-livro-default-rtdb.firebaseio.com",
   projectId: "comentarios-livro",
-  storageBucket: "comentarios-livro.appspot.com",
+  storageBucket: "comentarios-livro.firebasestorage.app",
   messagingSenderId: "702096545512",
-  appId: "1:702096545512:web:f7f305fe579d246c41b5d"
+  appId: "1:702096545512:web:f7f305f0e579d246c41b5d"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
