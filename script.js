@@ -348,14 +348,15 @@ const firebaseConfig = {
       const date = new Date(c.timestamp);
       const dataFormatada = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
-      // Use the pre-fetched replyToHtml
-      div.innerHTML = `
-        <div class="comment-header">
-          <span class="comment-author">${c.name}</span>
-          <span class="comment-timestamp">(${dataFormatada})</span>
-        </div>
-        ${c.replyToHtml} <div class="comment-message">${renderMessage(c.message)}</div>
-      `;
+      // Use o conteúdo pré-processado do replyToHtml e renderize a mensagem com estilo (markdown + menções)
+div.innerHTML = `
+  <div class="comment-header">
+    <span class="comment-author">${c.name}</span>
+    <span class="comment-timestamp">(${dataFormatada})</span>
+  </div>
+  ${c.replyToHtml || ""} <!-- Bloco de resposta, se existir -->
+  <div class="comment-message">${renderMessage(c.message || "")}</div>
+`;
 
       const actionsDiv = document.createElement("div");
       actionsDiv.className = "comment-actions";
