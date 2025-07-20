@@ -17,7 +17,7 @@ const onlineRef = db.ref("logados");
 const bannedRef = db.ref("banidos");
 
 const ADMIN_UID = "mIsJ6CcuSQdk8VkWayuekdMcn7L2"; // SUBSTITUA PELO SEU UID DE ADMIN REAL
-const ADMIN_ICON_URL = 'CAMINHO/DA/SUA/IMAGEM.png'; // <---- SUBSTITUA ESTE VALOR PELA URL REAL DA SUA IMAGEM (ex: 'assets/admin_icon.png')
+const ADMIN_ICON_URL = 'adm-icon.png'; // <---- SUBSTITUA ESTE VALOR PELA URL REAL DA SUA IMAGEM (ex: 'assets/admin_icon.png')
 
 const loginBtn = document.getElementById("login-btn");
 const logoutBtn = document.getElementById("logout-btn");
@@ -50,8 +50,7 @@ let replyToAuthorName = null;
 let allUsersMap = {}; // Armazena { lowercaseName: { name: originalName, uid: uid } }
 let currentLoggedInUserUid = null;
 let currentLoggedInUserName = null;
-let isAuthReady = false; // Flag para indicar se a autenticação está pronta
-let isNamesReady = false; // Flag para indicar se os nomes foram carregados
+let isNamesLoaded = false; // Flag para indicar se os nomes foram carregados inicialmente
 
 // Elementos para Modo Escuro/Claro
 const themeToggle = document.getElementById("theme-toggle"); // Botão ou switch para alternar
@@ -175,7 +174,7 @@ function cancelReply() {
 cancelReplyBtn.addEventListener('click', cancelReply);
 
 // Troca botão de registro/login
-loginBtn.textContent = "Registrar";
+loginBtn.textContent = "Registrar ou Fazer Login"; // Texto inicial do botão
 loginBtn.addEventListener("click", () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
@@ -189,10 +188,14 @@ logoutBtn.addEventListener("click", () => {
     if (user) {
         onlineRef.child(user.uid).remove(); // Remove o status online
         auth.signOut().then(() => {
-            // Não recarrega, a função onAuthStateChanged vai lidar com a interface
+            // A interface será atualizada por onAuthStateChanged
         }).catch(error => {
             showAlert(`Erro ao sair: ${error.message}`, true);
         });
+    } else {
+        // Se o botão de sair for clicado sem estar logado (bug), apenas atualiza a UI
+        updateUIForLoggedOut();
+        showAlert("Você não estava logado.", true);
     }
 });
 
@@ -243,75 +246,85 @@ deleteBtn.addEventListener("click", async () => {
     }
 });
 
-// Listener principal de autenticação
-auth.onAuthStateChanged(async user => {
-    currentLoggedInUserUid = user ? user.uid : null;
-    currentLoggedInUserName = null; // Resetar nome
-    isAuthReady = true; // Autenticação está pronta
+// Função para atualizar a UI quando o usuário está logado
+async function updateUIForLoggedIn(user) {
+    currentLoggedInUserUid = user.uid;
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "inline-block";
+    deleteBtn.style.display = "inline-block";
+    nameInput.style.display = "none"; // Esconde o input de nome se logado
 
-    if (user) {
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-        deleteBtn.style.display = "inline-block";
-        nameInput.style.display = "none"; // Hide name input if logged in
-
-        const ban = await bannedRef.child(user.uid).once("value");
-        if (ban.exists()) {
-            await showCustomAlert("Você foi banido e será desconectado.");
-            auth.signOut(); // Desconecta o usuário banido
-            return;
-        }
-
-        const nameSnap = await namesRef.child(user.uid).once("value");
-        let nick;
-
-        if (!nameSnap.exists()) {
-            let tryName;
-            let nameExists = true;
-            while (nameExists) {
-                tryName = await showCustomPrompt("Escolha um nome único:", "text");
-                if (!tryName) {
-                    auth.signOut(); // Se o usuário cancelar a escolha do nome, desloga
-                    return;
-                }
-                const exists = await namesRef.orderByValue().equalTo(tryName).once("value");
-                if (exists.exists()) {
-                    await showCustomAlert("Nome já está em uso. Por favor, escolha outro.");
-                } else {
-                    nameExists = false;
-                }
-            }
-            await namesRef.child(user.uid).set(tryName);
-            nick = tryName;
-        } else {
-            nick = nameSnap.val();
-        }
-
-        currentLoggedInUserName = nick; // Armazena o nome do usuário logado
-        userInfo.innerHTML = `👤 Logado como: <strong>${nick}</strong>`;
-        onlineRef.child(user.uid).set(true);
-        onlineRef.child(user.uid).onDisconnect().remove();
-
-    } else {
-        loginBtn.textContent = "Registrar ou Fazer Login";
-        logoutBtn.style.display = "inline-block";
-        deleteBtn.style.display = "none";
-        userInfo.innerHTML = "Faça login para comentar.";
-        nameInput.style.display = "inline-block"; // Show name input if not logged in
+    const ban = await bannedRef.child(user.uid).once("value");
+    if (ban.exists()) {
+        await showCustomAlert("Você foi banido e será desconectado.");
+        auth.signOut(); // Desconecta o usuário banido
+        return;
     }
 
-    // Tenta renderizar os comentários após a autenticação estar pronta
-    checkAndRenderComments();
+    const nameSnap = await namesRef.child(user.uid).once("value");
+    let nick;
+
+    if (!nameSnap.exists()) {
+        let tryName;
+        let nameExists = true;
+        while (nameExists) {
+            tryName = await showCustomPrompt("Escolha um nome único:", "text");
+            if (!tryName) {
+                auth.signOut(); // Se o usuário cancelar a escolha do nome, desloga
+                return;
+            }
+            const exists = await namesRef.orderByValue().equalTo(tryName).once("value");
+            if (exists.exists()) {
+                await showCustomAlert("Nome já está em uso. Por favor, escolha outro.");
+            } else {
+                nameExists = false;
+            }
+        }
+        await namesRef.child(user.uid).set(tryName);
+        nick = tryName;
+    } else {
+        nick = nameSnap.val();
+    }
+
+    currentLoggedInUserName = nick; // Armazena o nome do usuário logado
+    userInfo.innerHTML = `👤 Logado como: <strong>${nick}</strong>`;
+    onlineRef.child(user.uid).set(true);
+    onlineRef.child(user.uid).onDisconnect().remove();
+
+    // Garante que o input de mensagem e botão de enviar estejam visíveis para usuários logados
+    messageInput.style.display = 'block';
+    form.querySelector('button[type="submit"]').style.display = 'inline-block';
+
+    // Garante que os comentários sejam renderizados após o login e nome estarem prontos
+    // Não chamamos renderAllComments() aqui, pois namesRef.on("value") fará isso
+}
+
+// Função para atualizar a UI quando o usuário está deslogado
+function updateUIForLoggedOut() {
+    currentLoggedInUserUid = null;
+    currentLoggedInUserName = null;
+    loginBtn.style.display = "inline-block";
+    logoutBtn.style.display = "none";
+    deleteBtn.style.display = "none";
+    userInfo.innerHTML = "Faça login para comentar.";
+    nameInput.style.display = "inline-block"; // Mostra o input de nome se não logado
+    
+    // Manter visível para permitir comentários anônimos, se desejado
+    messageInput.style.display = 'block';
+    form.querySelector('button[type="submit"]').style.display = 'inline-block';
+    
+    // Garante que os comentários sejam renderizados para refletir o estado sem login
+    // Não chamamos renderAllComments() aqui, pois namesRef.on("value") fará isso
+}
+
+// Listener principal de autenticação
+auth.onAuthStateChanged(async user => {
+    if (user) {
+        await updateUIForLoggedIn(user);
+    } else {
+        updateUIForLoggedOut();
+    }
 });
-
-// Remove a funcionalidade de enviar mensagem com Enter
-// messageInput.addEventListener("keydown", function(event) {
-//     if (event.key === "Enter" && !event.shiftKey) {
-//         event.preventDefault();
-//         form.dispatchEvent(new Event('submit'));
-//     }
-// });
-
 
 form.addEventListener("submit", async e => {
     e.preventDefault();
@@ -352,11 +365,12 @@ form.addEventListener("submit", async e => {
     }
 });
 
-// Listener de comentários
+// Listener de comentários - Este é o único responsável por renderizar os comentários
 commentsRef.on("value", async snapshot => {
-    // Só renderiza se a autenticação e os nomes estiverem prontos
-    if (!isAuthReady || !isNamesReady) {
-        return; // Não renderiza ainda
+    // Só renderiza se os nomes já tiverem sido carregados (isNamesLoaded)
+    // Isso evita renderizar comentários com nomes ausentes na primeira carga
+    if (!isNamesLoaded) {
+        return;
     }
 
     commentsDiv.innerHTML = "";
@@ -396,12 +410,12 @@ commentsRef.on("value", async snapshot => {
         return { ...c, replyToHtml: replyToHtml, originalCommentAuthorUid: originalCommentAuthorUid };
     }));
 
-    // Renderiza cada comentário. Agora, passando o UID do usuário logado para renderMessage.
+    // Renderiza cada comentário.
     for (const c of commentsWithReplyData) {
         const div = document.createElement("div");
         div.className = "comment";
 
-        // NOVO: Adiciona classe para destaque de resposta *se for para o usuário logado*
+        // Adiciona classe para destaque de resposta *se for para o usuário logado*
         if (currentLoggedInUserUid && c.replyToId && c.originalCommentAuthorUid === currentLoggedInUserUid) {
             div.classList.add("is-reply-to-me");
         }
@@ -522,18 +536,15 @@ namesRef.on("value", async snap => {
         allUsersMap[name.toLowerCase()] = { name: name, uid: uid };
     });
 
-    isNamesReady = true; // Nomes foram carregados
-    // Tenta renderizar os comentários após os nomes estarem prontos
-    checkAndRenderComments();
+    isNamesLoaded = true; // Nomes foram carregados
+    // Dispara a renderização dos comentários após os nomes estarem prontos
+    renderAllComments();
 });
 
-// Nova função para verificar e disparar a renderização dos comentários
-function checkAndRenderComments() {
-    if (isAuthReady && isNamesReady) {
-        // Se ambos estiverem prontos, força uma leitura para garantir que o listener commentsRef.on("value")
-        // seja disparado e renderize o conteúdo.
-        commentsRef.once("value");
-    }
+function renderAllComments() {
+    // Força uma leitura para garantir que o listener commentsRef.on("value")
+    // seja disparado e renderize o conteúdo.
+    commentsRef.once("value");
 }
 
 // Função para aplicar markdown (menções removidas)
