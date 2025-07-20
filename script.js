@@ -16,7 +16,7 @@ const namesRef = db.ref("nomesUsados");
 const onlineRef = db.ref("logados");
 const bannedRef = db.ref("banidos");
 
-const ADMIN_UID = "RTJkscPxu9MjMFL4RZSaILntfM13"; // SUBSTITUA PELO SEU UID DE ADMIN REAL
+const ADMIN_UID = "mIsJ6CcuSQdk8VkWayuekdMcn7L2"; // SUBSTITUA PELO SEU UID DE ADMIN REAL
 
 const loginBtn = document.getElementById("login-btn");
 const logoutBtn = document.getElementById("logout-btn");
