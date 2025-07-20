@@ -302,8 +302,8 @@
       color: #ffffff;
     }
 
-    /* Estilo padrão das menções (TODOS os usuários) */
-    .mention {
+    /* Estilo de menção para o usuário logado (ele marcou ou foi marcado) */
+    .personal-mention {
       color: #00aff4; /* Azul Discord padrão para menção */
       font-weight: bold;
       background-color: rgba(0, 170, 255, 0.1);
@@ -311,8 +311,8 @@
       border-radius: 4px;
     }
 
-    /* Estilo ESPECÍFICO para menções de ADMIN (sobrepõe o .mention) */
-    .mention.admin-mention {
+    /* Estilo ESPECÍFICO para menções de ADMIN (sobrepõe o .personal-mention quando aplicável) */
+    .personal-mention.admin-mention {
       color: #c4c4ff; /* Um azul mais claro e vibrante para o admin */
       background-color: rgba(196, 196, 255, 0.15); /* Fundo um pouco diferente */
       text-shadow: 0 0 3px rgba(196, 196, 255, 0.3); /* Um brilho sutil */
@@ -356,12 +356,12 @@
     </div>
 
     <form id="comment-form">
-      <input type="text" id="name" placeholder="Seu nome (só se não estiver logado)" style="display:none;" />
+      <input type="text" id="name" placeholder="Seu nome (só se não estiver logado)" style="display:none;" autocomplete="off" />
       <div id="reply-box" style="display:none;">
           <span class="reply-message"></span>
           <button type="button" class="cancel-reply-btn">X</button>
       </div>
-      <textarea id="message" placeholder="Seu comentário" required rows="3"></textarea>
+      <textarea id="message" placeholder="Seu comentário" required rows="3" autocomplete="off"></textarea>
       <ul id="mention-suggestions"></ul>
       
       <button type="submit">Enviar</button>
