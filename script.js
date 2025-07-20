@@ -444,7 +444,7 @@ namesRef.on("value", async snap => {
     snap.forEach(child => {
         const uid = child.key;
         const name = child.val();
-        allUsersMap[name.toLowerCase()] = uid;
+        allUsersMap[name.toLowerCase()] = { name: name, uid: uid }; // Armazenar o nome original e o UID
     });
 
     // Re-renderiza os comentários com menções estilizadas (após atualização do mapa)
@@ -460,15 +460,18 @@ function renderMessage(text) {
 
     // Substitui @menções por spans personalizados
     html = html.replace(/@(\w{1,20})/g, (match, username) => {
-        // Usa allUsersMap para verificar se o nome existe, independentemente de estar online
-        if (allUsersMap[username.toLowerCase()]) {
-            return `<span class="mention">@${username}</span>`;
+        const lowerCaseUsername = username.toLowerCase();
+        if (allUsersMap[lowerCaseUsername]) {
+            const mentionedUserUid = allUsersMap[lowerCaseUsername].uid;
+            // Se o usuário mencionado é o admin, adiciona a classe admin-mention
+            const mentionClass = (mentionedUserUid === ADMIN_UID) ? "mention admin-mention" : "mention";
+            return `<span class="${mentionClass}">@${username}</span>`;
         }
         return match;
     });
 
     return html; // Retorna o HTML processado
-} // FIM da função renderMessage
+}
 
 const mentionBox = document.getElementById("mention-suggestions");
 
@@ -480,9 +483,9 @@ messageInput.addEventListener("input", async (e) => {
     if (match) {
         const prefix = match[1].toLowerCase();
         // Usa allUsersMap para sugerir todos os usuários registrados
-        const suggestions = Object.keys(allUsersMap).filter(name =>
-            name.toLowerCase().startsWith(prefix)
-        );
+        const suggestions = Object.keys(allUsersMap)
+            .filter(nameKey => nameKey.startsWith(prefix))
+            .map(nameKey => allUsersMap[nameKey].name); // Retorna o nome original para a sugestão
 
         if (suggestions.length === 0) {
             mentionBox.style.display = "none";
@@ -517,44 +520,7 @@ document.addEventListener("click", (e) => {
     }
 });
 
-// A função renderAllComments já estava sendo chamada no `commentsRef.on("value")`
-// e também adicionei a chamada após a atualização do `allUsersMap` para garantir
-// que as menções sejam sempre atualizadas.
 function renderAllComments() {
-    // Não precisa mais do .once() e .off("value") aqui, pois o commentsRef.on("value")
-    // já lida com a re-renderização quando os comentários mudam.
-    // O objetivo desta função agora é apenas ser um "gatilho" para a renderização,
-    // que é feita pelo listener principal de `commentsRef`.
-    // Ao chamar commentsRef.on("value"), ele já dispara uma primeira vez com os dados atuais.
-    // Assim, se o allUsersMap muda, podemos apenas re-triggerar essa re-renderização.
-    // Para forçar uma re-renderização completa baseada em novos dados de `allUsersMap`,
-    // é mais eficiente ter o `commentsRef.on` direto e, se `allUsersMap` mudar,
-    // garantimos que ele refaça a renderização.
-
-    // A forma mais simples de "re-renderizar" após a atualização do allUsersMap
-    // é disparar uma leitura dos comentários novamente.
-    // A melhor prática é apenas confiar no listener `commentsRef.on("value")`
-    // que já está observando mudanças. Quando `allUsersMap` muda, os comentários
-    // exibidos na tela *não mudam*, mas a forma como as menções são coloridas *deveria*.
-    // Para que as menções sejam re-aplicadas, você precisaria re-renderizar todo o `commentsDiv`.
-    // O `commentsRef.on("value")` já faz isso. Se `namesRef` mudar, e você quer que os comentários
-    // existentes se atualizem com as novas menções, o jeito mais simples é chamar
-    // commentsRef.once("value") novamente para forçar a re-leitura e, consequentemente,
-    // a re-renderização pelo `commentsRef.on("value")` principal.
-
-    // Para evitar loops infinitos ou renderizações desnecessárias:
-    // O `commentsRef.on("value")` já é um listener contínuo.
-    // Se o objetivo é que as menções se atualizem se o `allUsersMap` mudar,
-    // e o `commentsRef.on("value")` já usa `renderMessage` que usa `allUsersMap`,
-    // então a simples atualização de `allUsersMap` e a próxima mudança nos comentários
-    // já re-renderizará corretamente.
-
-    // No entanto, para FORÇAR a atualização das menções em COMENTÁRIOS JÁ EXISTENTES
-    // QUANDO O MAPA DE USUÁRIOS É ATUALIZADO (e não há nova atividade de comentário),
-    // precisamos manualmente re-renderizar.
-
-    // Re-disparar a lógica de renderização de comentários.
-    // Uma forma simples é fazer uma leitura única forçada:
     commentsRef.once("value", snapshot => {
         // Isso vai disparar o `commentsRef.on("value")` principal novamente,
         // que por sua vez re-renderizará os comentários usando o `allUsersMap` atualizado.
