@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Livro + Comentários</title>
   <style>
-    /* Variáveis para o tema escuro (padrão) */
+   /* Variáveis para o tema escuro (padrão) */
+/* Variáveis para o tema escuro (padrão) */
 :root {
     --bg-dark: #1e1e1e; /* Darker background for chat feel */
     --fg-dark: #ffffff;
@@ -13,7 +14,7 @@
     --border-dark: #36393f; /* Darker border for chat feel */
     --comment-bg-dark: #36393f; /* Discord dark grey for comments */
     --comment-own-bg-dark: #4f545c; /* Slightly lighter grey for own comments */
-    --admin-bg-dark: #3b3f4a; /* Admin comments com o azul mais forte */
+    --admin-bg-dark: var(--comment-bg-dark); /* AGORA IGUAL AO DO COMENTÁRIO NORMAL */
     --input-bg-dark: #40444b;
     --button-hover-dark: #4752c4; /* Ajuste para o hover do botão */
     --container-bg-dark: #2f3136;
@@ -31,7 +32,7 @@ body:not(.dark-mode) {
     --border: #cccccc; /* Borda clara */
     --comment-bg: #ffffff; /* Fundo branco para comentários */
     --comment-own-bg: #e0f2f7; /* Azul bem clarinho para comentários próprios */
-    --admin-bg: #fff0f0; /* Vermelho muito claro para admin */
+    --admin-bg: var(--comment-bg); /* AGORA IGUAL AO DO COMENTÁRIO NORMAL */
     --input-bg: #ffffff;
     --button-hover: #0056b3; /* Hover mais escuro para botões azuis */
     --container-bg: #ffffff; /* Fundo do container branco */
@@ -142,9 +143,8 @@ button:hover {
 .comment.own {
     background: var(--comment-own-bg);
 }
-.comment.admin {
-    background: var(--admin-bg); /* Admin comments distinct */
-}
+/* A classe .comment.admin não tem mais uma cor de background específica,
+   herda de .comment ou .comment.own se for um comentário próprio do admin. */
 .comment-header {
     display: flex;
     align-items: baseline;
@@ -156,9 +156,27 @@ button:hover {
     color: var(--accent); /* Author name in accent color */
 }
 .comment.admin .comment-author {
-    color: #c4c4ff; /* Um azul mais claro e vibrante para o nome do Admin */
-    text-shadow: 0 0 5px rgba(196, 196, 255, 0.5); /* Um brilho sutil */
+    /* ESTILO PARA O NOME DO ADMIN NO TEMA ESCURO */
+    color: #00bcd4; /* Azul ciano */
+    text-shadow: 0 0 5px rgba(0, 188, 212, 0.5); /* Sombra para o ciano */
 }
+/* Estilo específico para o nome do admin no tema claro, se desejar diferente do tema escuro */
+body:not(.dark-mode) .comment.admin .comment-author {
+    color: #0097a7; /* Um azul ciano um pouco mais escuro para o tema claro */
+    text-shadow: none; /* Sem brilho no tema claro */
+    font-weight: bold; /* Manter negrito */
+}
+
+/* NOVO: Estilo para a imagem do admin */
+.admin-icon {
+    width: 20px; /* Largura da imagem */
+    height: 20px; /* Altura da imagem */
+    vertical-align: middle; /* Alinha verticalmente com o texto */
+    margin-right: 4px; /* Espaçamento entre o ícone e o nome */
+    border-radius: 3px; /* Bordas levemente arredondadas se for uma imagem quadrada */
+}
+
+
 .comment-timestamp {
     font-size: 0.8em;
     color: #b9bbbe; /* Um cinza mais claro para a data e hora */
@@ -167,7 +185,7 @@ body:not(.dark-mode) .comment-timestamp {
     color: #6c757d; /* Mais escuro para tema claro */
 }
 .comment.admin .comment-timestamp {
-    color: #e0e0ff; /* Azul bem claro para a data e hora dos comentários do Admin */
+    color: #e0e0ff; /* Azul bem claro para a data e hora dos comentários do Admin (tema escuro) */
 }
 body:not(.dark-mode) .comment.admin .comment-timestamp {
     color: #a0a0ff; /* Mais escuro para tema claro */
