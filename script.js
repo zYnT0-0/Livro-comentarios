@@ -442,3 +442,48 @@ const firebaseConfig = {
   onlineRef.on("value", snap => {
     userCount.textContent = `👥 Usuários online: ${snap.numChildren()}`;
   });
+
+// Salva os nomes online para referência nas menções
+let onlineUsersMap = {};
+onlineRef.on("value", async snap => {
+  userCount.textContent = `👥 Usuários online: ${snap.numChildren()}`;
+  onlineUsersMap = {};
+
+  const uids = Object.keys(snap.val() || {});
+  for (const uid of uids) {
+    const nameSnap = await namesRef.child(uid).once("value");
+    if (nameSnap.exists()) {
+      onlineUsersMap[nameSnap.val()] = uid;
+    }
+  }
+});
+
+// Função para transformar @nomes em spans destacados
+function parseMentions(text) {
+  return text.replace(/@(\w+)/g, (match, username) => {
+    if (onlineUsersMap[username]) {
+      return `<span class="mention">@${username}</span>`;
+    }
+    return match;
+  });
+}
+
+// Função para aplicar markdown simples (negrito, itálico, sublinhado)
+function renderMessage(text) {
+  let html = text
+    .replace(/&/g, "&amp;") // Sanitize
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Markdown básico
+  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+  html = html.replace(/__(.*?)__/g, "<u>$1</u>");
+  html = html.replace(/`(.*?)`/g, "<code>$1</code>");
+  html = html.replace(/\n/g, "<br>"); // Line breaks
+
+  // Menções
+  html = parseMentions(html);
+
+  return html;
+}
