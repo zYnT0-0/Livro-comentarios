@@ -17,8 +17,7 @@ const onlineRef = db.ref("logados");
 const bannedRef = db.ref("banidos");
 
 const ADMIN_UID = "mIsJ6CcuSQdk8VkWayuekdMcn7L2"; // SUBSTITUA PELO SEU UID DE ADMIN REAL
-// AQUI VOCÊ DEVE ADICIONAR A URL DA IMAGEM DO ÍCONE DO ADMIN
-const ADMIN_ICON_URL = 'adm-icon.png'; // <---- SUBSTITUA ESTE VALOR PELA URL REAL DA SUA IMAGEM (ex: 'assets/admin_icon.png')
+const ADMIN_ICON_URL = 'CAMINHO/DA/SUA/IMAGEM.png'; // <---- SUBSTITUA ESTE VALOR PELA URL REAL DA SUA IMAGEM (ex: 'assets/admin_icon.png')
 
 const loginBtn = document.getElementById("login-btn");
 const logoutBtn = document.getElementById("logout-btn");
@@ -55,6 +54,9 @@ let currentLoggedInUserName = null;
 // Elementos para Modo Escuro/Claro
 const themeToggle = document.getElementById("theme-toggle"); // Botão ou switch para alternar
 const body = document.body; // O elemento body para aplicar a classe do tema
+
+// Flag para controlar se os dados iniciais de nomes e comentários foram carregados
+let initialDataLoaded = false;
 
 // Função para aplicar o tema salvo
 function applyTheme(theme) {
@@ -281,6 +283,8 @@ auth.onAuthStateChanged(async user => {
             }
             await namesRef.child(user.uid).set(tryName);
             nick = tryName;
+            // Força a atualização do allUsersMap e re-renderização após um novo nome ser definido
+            namesRef.once("value"); // Dispara o listener do namesRef novamente
         } else {
             nick = nameSnap.val();
         }
@@ -299,10 +303,17 @@ auth.onAuthStateChanged(async user => {
         nameInput.style.display = "inline-block"; // Show name input if not logged in
     }
 
+    // Garante que a renderização ocorra após a autenticação e o nome estar disponível
     renderAllComments();
 });
 
-
+// Remove a funcionalidade de enviar mensagem com Enter
+// messageInput.addEventListener("keydown", function(event) {
+//     if (event.key === "Enter" && !event.shiftKey) {
+//         event.preventDefault();
+//         form.dispatchEvent(new Event('submit'));
+//     }
+// });
 
 
 form.addEventListener("submit", async e => {
@@ -509,10 +520,14 @@ namesRef.on("value", async snap => {
         allUsersMap[name.toLowerCase()] = { name: name, uid: uid };
     });
 
+    // Marca que os dados iniciais de nomes foram carregados
+    initialDataLoaded = true;
+    // Força a renderização dos comentários após o allUsersMap ser populado
     renderAllComments();
 });
 
 function renderAllComments() {
+    // Dispara o listener principal de comentários para re-renderizar
     commentsRef.once("value");
 }
 
