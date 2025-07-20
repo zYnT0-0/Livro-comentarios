@@ -17,7 +17,7 @@ const onlineRef = db.ref("logados");
 const bannedRef = db.ref("banidos");
 
 const ADMIN_UID = "mIsJ6CcuSQdk8VkWayuekdMcn7L2"; // SUBSTITUA PELO SEU UID DE ADMIN REAL
-const ADMIN_ICON_URL = 'adm-icon.png'; // <---- SUBSTITUA ESTE VALOR PELA URL REAL DA SUA IMAGEM (ex: 'assets/admin_icon.png')
+const ADMIN_ICON_URL = 'adm-icon.png'; // <---- SUBSTITUA ESTE VALOR PELA URL REAL DA SUA IMAGEM (ex: 'assets/adm-icon.png')
 
 const loginBtn = document.getElementById("login-btn");
 const logoutBtn = document.getElementById("logout-btn");
@@ -194,7 +194,7 @@ logoutBtn.addEventListener("click", () => {
         });
     } else {
         // Se o botão de sair for clicado sem estar logado (bug), apenas atualiza a UI
-        updateUIForLoggedOut();
+        updateUIForLoggedOut(); // Garante que a UI esteja no estado correto
         showAlert("Você não estava logado.", true);
     }
 });
@@ -295,8 +295,7 @@ async function updateUIForLoggedIn(user) {
     messageInput.style.display = 'block';
     form.querySelector('button[type="submit"]').style.display = 'inline-block';
 
-    // Garante que os comentários sejam renderizados após o login e nome estarem prontos
-    // Não chamamos renderAllComments() aqui, pois namesRef.on("value") fará isso
+    // A renderização de comentários será disparada pelo namesRef.on("value")
 }
 
 // Função para atualizar a UI quando o usuário está deslogado
@@ -304,8 +303,8 @@ function updateUIForLoggedOut() {
     currentLoggedInUserUid = null;
     currentLoggedInUserName = null;
     loginBtn.style.display = "inline-block";
-    logoutBtn.style.display = "none";
-    deleteBtn.style.display = "none";
+    logoutBtn.style.display = "none"; // Garante que o botão de sair esteja escondido
+    deleteBtn.style.display = "none"; // Garante que o botão de apagar esteja escondido
     userInfo.innerHTML = "Faça login para comentar.";
     nameInput.style.display = "inline-block"; // Mostra o input de nome se não logado
     
@@ -313,8 +312,7 @@ function updateUIForLoggedOut() {
     messageInput.style.display = 'block';
     form.querySelector('button[type="submit"]').style.display = 'inline-block';
     
-    // Garante que os comentários sejam renderizados para refletir o estado sem login
-    // Não chamamos renderAllComments() aqui, pois namesRef.on("value") fará isso
+    // A renderização de comentários será disparada pelo namesRef.on("value")
 }
 
 // Listener principal de autenticação
@@ -324,6 +322,7 @@ auth.onAuthStateChanged(async user => {
     } else {
         updateUIForLoggedOut();
     }
+    // O namesRef.on("value") será o gatilho final para renderizar os comentários
 });
 
 form.addEventListener("submit", async e => {
@@ -381,7 +380,7 @@ commentsRef.on("value", async snapshot => {
 
     commentsArray.sort((a, b) => a.timestamp - b.timestamp);
 
-    // Using Promise.all to fetch original comments in parallel for performance
+    // Usando Promise.all para buscar comentários originais em paralelo para performance
     const commentsWithReplyData = await Promise.all(commentsArray.map(async (c) => {
         let replyToHtml = '';
         let originalCommentAuthorUid = null; // Para verificar se o usuário logado foi o autor da mensagem original
