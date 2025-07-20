@@ -17,6 +17,8 @@ const onlineRef = db.ref("logados");
 const bannedRef = db.ref("banidos");
 
 const ADMIN_UID = "mIsJ6CcuSQdk8VkWayuekdMcn7L2"; // SUBSTITUA PELO SEU UID DE ADMIN REAL
+// AQUI VOCÊ DEVE ADICIONAR A URL DA IMAGEM DO ÍCONE DO ADMIN
+const ADMIN_ICON_URL = 'CAMINHO/DA/SUA/IMAGEM.png'; // <---- SUBSTITUA ESTE VALOR PELA URL REAL DA SUA IMAGEM (ex: 'assets/admin_icon.png')
 
 const loginBtn = document.getElementById("login-btn");
 const logoutBtn = document.getElementById("logout-btn");
@@ -300,13 +302,7 @@ auth.onAuthStateChanged(async user => {
     renderAllComments();
 });
 
-// NOVO: Adiciona a funcionalidade de enviar mensagem com Enter
-messageInput.addEventListener("keydown", function(event) {
-    if (event.key === "Enter" && !event.shiftKey) { // Envia ao pressionar Enter, mas permite Shift+Enter para quebrar linha
-        event.preventDefault(); // Impede a quebra de linha padrão do Enter
-        form.dispatchEvent(new Event('submit')); // Dispara o evento de submit do formulário
-    }
-});
+
 
 
 form.addEventListener("submit", async e => {
@@ -392,13 +388,6 @@ commentsRef.on("value", async snapshot => {
         const div = document.createElement("div");
         div.className = "comment";
 
-        // Adiciona classe para destaque de respostas GERAIS
-        // Removido o estilo is-reply geral para não ter fundo diferente para todos,
-        // apenas para quem a resposta é direcionada.
-        // if (c.replyToId) {
-        //     div.classList.add("is-reply");
-        // }
-
         // NOVO: Adiciona classe para destaque de resposta *se for para o usuário logado*
         if (currentLoggedInUserUid && c.replyToId && c.originalCommentAuthorUid === currentLoggedInUserUid) {
             div.classList.add("is-reply-to-me");
@@ -414,9 +403,15 @@ commentsRef.on("value", async snapshot => {
         const date = new Date(c.timestamp);
         const dataFormatada = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
+        // Lógica para adicionar o ícone do admin
+        let adminIconHtml = '';
+        if (c.uid === ADMIN_UID) {
+            adminIconHtml = `<img src="${ADMIN_ICON_URL}" alt="Admin" class="admin-icon" title="Administrador">`;
+        }
+
         div.innerHTML = `
             <div class="comment-header">
-                <span class="comment-author">${c.name}</span>
+                ${adminIconHtml} <span class="comment-author">${c.name}</span>
                 <span class="comment-timestamp">(${dataFormatada})</span>
             </div>
             ${c.replyToHtml} <div class="comment-message">${renderMessage(c.message, c.uid, currentLoggedInUserUid)}</div>
