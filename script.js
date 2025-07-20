@@ -354,7 +354,7 @@ const firebaseConfig = {
           <span class="comment-author">${c.name}</span>
           <span class="comment-timestamp">(${dataFormatada})</span>
         </div>
-        ${c.replyToHtml} <div class="comment-message">${c.message}</div>
+        ${c.replyToHtml} <div class="comment-message">${renderMessage(c.message)}</div>
       `;
 
       const actionsDiv = document.createElement("div");
