@@ -91,15 +91,15 @@ h2 {
     color: var(--fg);
     margin-bottom: 20px;
 }
+#user-info-section {
+    text-align: center;
+}
 #user-controls {
     display: flex;
     gap: 10px;
     margin-bottom: 10px;
     flex-wrap: wrap; /* Allow wrapping on smaller screens */
     justify-content: center; /* Centraliza os botões */
-}
-#user-info-section {
-    text-align: center;
 }
 #comment-form {
     display: flex;
@@ -203,7 +203,6 @@ body:not(.dark-mode) .comment.admin .comment-timestamp {
     display: flex;
     flex-wrap: wrap; /* Permitir que os botões quebrem para a próxima linha */
     gap: 8px; /* Spacing between action buttons */
-    /* REMOVIDO: justify-content: space-between; Isso pode causar espaçamento excessivo */
 }
 .comment-actions button {
     padding: 6px 10px; /* Smaller padding for action buttons */
@@ -212,7 +211,6 @@ body:not(.dark-mode) .comment.admin .comment-timestamp {
     min-width: fit-content; /* Garante que o texto não seja cortado */
 }
 .admin-buttons {
-    /* margin-left: auto; */ /* REMOVIDO: Isso empurra para a direita, mas pode causar problemas com wrap */
     display: flex;
     flex-wrap: wrap; /* Permite que os botões do admin quebrem linha */
     gap: 8px;
