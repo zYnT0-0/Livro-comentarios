@@ -96,6 +96,10 @@ h2 {
     gap: 10px;
     margin-bottom: 10px;
     flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    justify-content: center; /* Centraliza os botões */
+}
+#user-info-section {
+    text-align: center;
 }
 #comment-form {
     display: flex;
@@ -122,6 +126,7 @@ button {
     cursor: pointer;
     font-weight: bold;
     transition: background-color 0.2s ease;
+    white-space: nowrap; /* Evita quebra de linha do texto do botão */
 }
 button:hover {
     background-color: var(--button-hover);
@@ -196,19 +201,28 @@ body:not(.dark-mode) .comment.admin .comment-timestamp {
 .comment-actions {
     margin-top: 8px;
     display: flex;
+    flex-wrap: wrap; /* Permitir que os botões quebrem para a próxima linha */
     gap: 8px; /* Spacing between action buttons */
+    /* REMOVIDO: justify-content: space-between; Isso pode causar espaçamento excessivo */
 }
 .comment-actions button {
     padding: 6px 10px; /* Smaller padding for action buttons */
     font-size: 0.85em;
+    flex-grow: 1; /* Permite que os botões cresçam para preencher o espaço disponível, mas... */
+    min-width: fit-content; /* Garante que o texto não seja cortado */
 }
 .admin-buttons {
-    margin-left: auto; /* Push admin buttons to the right */
+    /* margin-left: auto; */ /* REMOVIDO: Isso empurra para a direita, mas pode causar problemas com wrap */
     display: flex;
+    flex-wrap: wrap; /* Permite que os botões do admin quebrem linha */
     gap: 8px;
+    flex-grow: 1; /* Permite que o container dos botões de admin cresça */
+    justify-content: flex-end; /* Alinha os botões de admin à direita dentro do seu container */
 }
 .admin-buttons button {
     background-color: #f04747; /* Red for delete/ban */
+    flex-grow: 1; /* Deixa os botões de admin crescerem */
+    min-width: fit-content; /* Garante que o texto não seja cortado */
 }
 .admin-buttons button:hover {
     background-color: #cc3a3a;
@@ -255,10 +269,12 @@ body:not(.dark-mode) .comment.admin .comment-timestamp {
     display: flex;
     justify-content: center;
     gap: 15px;
+    flex-wrap: wrap; /* Permite que os botões do modal quebrem linha */
 }
 .modal-content .modal-buttons button {
     flex: 1;
     padding: 10px;
+    min-width: 120px; /* Garante que os botões do modal tenham um tamanho mínimo */
 }
 .modal-content .modal-buttons .cancel-btn {
     background-color: #72767d;
@@ -301,6 +317,7 @@ body:not(.dark-mode) #reply-box {
 }
 #reply-box .reply-message {
     flex-grow: 1;
+    margin-right: 10px; /* Adiciona espaço entre a mensagem de resposta e o botão X */
 }
 #reply-box .cancel-reply-btn {
     background: none;
@@ -309,6 +326,7 @@ body:not(.dark-mode) #reply-box {
     font-size: 1.2em;
     cursor: pointer;
     padding: 0 5px;
+    flex-shrink: 0; /* Impede que o botão X encolha */
 }
 #reply-box .cancel-reply-btn:hover {
     color: #cc3a3a;
@@ -352,7 +370,7 @@ body:not(.dark-mode) .comment-reply-block.comment-reply-deleted {
     font-style: normal; /* No italics for deleted message text */
     color: #f04747;
 }
-body:not(.dark-mode) .comment-reply-block.comment-reply-deleted {
+body:not(.dark-mode) .comment-reply-block.comment-reply-deleted .reply-block-message {
     color: #dc3545;
 }
 
@@ -386,18 +404,56 @@ body:not(.dark-mode) .comment-reply-block.comment-reply-deleted {
     font-size: 0.9em;
 }
 
-/* NOVO: Media query para telas menores que 480px */
-@media (max-width: 480px) {
-    body {
-        padding: 10px; /* Reduz o padding para dar mais espaço ao conteúdo */
-    }
+/* Media query para telas menores que 600px */
+@media (max-width: 600px) {
     .container {
-        padding: 20px; /* Ajusta o padding interno do container */
+        padding: 20px;
+    }
+    #user-controls {
+        flex-direction: column; /* Empilha os botões de controle do usuário */
+        align-items: stretch; /* Estica os botões para a largura total */
     }
     #user-controls button,
     #user-controls select {
-        font-size: 0.8em; /* Ajusta o tamanho da fonte dos botões de controle */
-        padding: 8px 10px;
+        width: 100%; /* Faz com que os botões ocupem a largura total */
+        margin-bottom: 5px; /* Adiciona um pequeno espaçamento entre eles */
+    }
+    .comment-actions {
+        flex-direction: column; /* Empilha os botões de ação do comentário */
+        align-items: stretch; /* Estica os botões */
+    }
+    .comment-actions button {
+        width: 100%; /* Faz com que os botões de ação ocupem a largura total */
+        margin-bottom: 5px; /* Adiciona um pequeno espaçamento entre eles */
+    }
+    .admin-buttons {
+        flex-direction: column; /* Empilha os botões de admin */
+        align-items: stretch; /* Estica os botões de admin */
+    }
+    .admin-buttons button {
+        width: 100%; /* Faz com que os botões de admin ocupem a largura total */
+        margin-bottom: 5px; /* Adiciona um pequeno espaçamento entre eles */
+    }
+    .modal-content .modal-buttons button {
+        min-width: auto; /* Remove o min-width para permitir que se ajustem melhor */
+    }
+}
+
+/* Media query para telas menores que 400px (ainda mais estreitas) */
+@media (max-width: 400px) {
+    body {
+        padding: 10px; /* Reduz o padding do body em telas muito pequenas */
+    }
+    .container {
+        padding: 15px; /* Reduz ainda mais o padding do container */
+    }
+    .comment {
+        padding: 10px 12px; /* Reduz o padding dos comentários */
+    }
+    .comment-actions button,
+    .admin-buttons button {
+        font-size: 0.8em; /* Diminui a fonte dos botões de ação */
+        padding: 8px; /* Ajusta o padding */
     }
 }
 
