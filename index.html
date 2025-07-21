@@ -6,7 +6,6 @@
   <title>Livro + Comentários</title>
   <style>
    /* Variáveis para o tema escuro (padrão) */
-/* Variáveis para o tema escuro (padrão) */
 :root {
     --bg-dark: #1e1e1e; /* Darker background for chat feel */
     --fg-dark: #ffffff;
@@ -201,26 +200,21 @@ body:not(.dark-mode) .comment.admin .comment-timestamp {
 .comment-actions {
     margin-top: 8px;
     display: flex;
-    flex-wrap: wrap; /* Permitir que os botões quebrem para a próxima linha */
     gap: 8px; /* Spacing between action buttons */
 }
 .comment-actions button {
     padding: 6px 10px; /* Smaller padding for action buttons */
     font-size: 0.85em;
-    flex-grow: 1; /* Permite que os botões cresçam para preencher o espaço disponível, mas... */
-    min-width: fit-content; /* Garante que o texto não seja cortado */
+    /* Remover flex-grow e min-width daqui para que só se apliquem nas media queries */
 }
 .admin-buttons {
+    margin-left: auto; /* Push admin buttons to the right */
     display: flex;
-    flex-wrap: wrap; /* Permite que os botões do admin quebrem linha */
     gap: 8px;
-    flex-grow: 1; /* Permite que o container dos botões de admin cresça */
-    justify-content: flex-end; /* Alinha os botões de admin à direita dentro do seu container */
 }
 .admin-buttons button {
     background-color: #f04747; /* Red for delete/ban */
-    flex-grow: 1; /* Deixa os botões de admin crescerem */
-    min-width: fit-content; /* Garante que o texto não seja cortado */
+    /* Remover flex-grow e min-width daqui para que só se apliquem nas media queries */
 }
 .admin-buttons button:hover {
     background-color: #cc3a3a;
@@ -416,22 +410,6 @@ body:not(.dark-mode) .comment-reply-block.comment-reply-deleted .reply-block-mes
         width: 100%; /* Faz com que os botões ocupem a largura total */
         margin-bottom: 5px; /* Adiciona um pequeno espaçamento entre eles */
     }
-    .comment-actions {
-        flex-direction: column; /* Empilha os botões de ação do comentário */
-        align-items: stretch; /* Estica os botões */
-    }
-    .comment-actions button {
-        width: 100%; /* Faz com que os botões de ação ocupem a largura total */
-        margin-bottom: 5px; /* Adiciona um pequeno espaçamento entre eles */
-    }
-    .admin-buttons {
-        flex-direction: column; /* Empilha os botões de admin */
-        align-items: stretch; /* Estica os botões de admin */
-    }
-    .admin-buttons button {
-        width: 100%; /* Faz com que os botões de admin ocupem a largura total */
-        margin-bottom: 5px; /* Adiciona um pequeno espaçamento entre eles */
-    }
     .modal-content .modal-buttons button {
         min-width: auto; /* Remove o min-width para permitir que se ajustem melhor */
     }
@@ -448,10 +426,34 @@ body:not(.dark-mode) .comment-reply-block.comment-reply-deleted .reply-block-mes
     .comment {
         padding: 10px 12px; /* Reduz o padding dos comentários */
     }
-    .comment-actions button,
-    .admin-buttons button {
+    
+    /* Regras para os botões de ação e admin SÓ se aplicam abaixo de 400px */
+    .comment-actions {
+        flex-direction: column; /* Empilha os botões de ação do comentário */
+        align-items: stretch; /* Estica os botões */
+        flex-wrap: wrap; /* Permite que os botões quebrem para a próxima linha */
+    }
+    .comment-actions button {
+        width: 100%; /* Faz com que os botões de ação ocupem a largura total */
+        margin-bottom: 5px; /* Adiciona um pequeno espaçamento entre eles */
         font-size: 0.8em; /* Diminui a fonte dos botões de ação */
         padding: 8px; /* Ajusta o padding */
+        flex-grow: 1; /* Permite que os botões cresçam para preencher o espaço disponível */
+        min-width: fit-content; /* Garante que o texto não seja cortado */
+    }
+    .admin-buttons {
+        flex-direction: column; /* Empilha os botões de admin */
+        align-items: stretch; /* Estica os botões de admin */
+        flex-wrap: wrap; /* Permite que os botões do admin quebrem linha */
+        margin-left: 0; /* Remove o auto-margin para empilhar */
+    }
+    .admin-buttons button {
+        width: 100%; /* Faz com que os botões de admin ocupem a largura total */
+        margin-bottom: 5px; /* Adiciona um pequeno espaçamento entre eles */
+        font-size: 0.8em; /* Diminui a fonte dos botões de ação */
+        padding: 8px; /* Ajusta o padding */
+        flex-grow: 1; /* Deixa os botões de admin crescerem */
+        min-width: fit-content; /* Garante que o texto não seja cortado */
     }
 }
 
