@@ -1,133 +1,115 @@
+// Configuração do Firebase
 const firebaseConfig = {
-    apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",
-    authDomain: "comentarios-livro.firebaseapp.com",
-    databaseURL: "https://comentarios-livro-default-rtdb.firebaseio.com",
-    projectId: "comentarios-livro",
-    storageBucket: "comentarios-livro.appspot.com",
-    messagingSenderId: "702096545512",
-    appId: "1:702096545512:web:f7f305fe579d246c41b5d"
+    apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4", // SUA CHAVE DE API
+    authDomain: "comentarios-livro.firebaseapp.com", // SEU DOMÍNIO DE AUTENTICAÇÃO
+    databaseURL: "https://comentarios-livro-default-rtdb.firebaseio.com", // SUA URL DO BANCO DE DADOS
+    projectId: "comentarios-livro", // SEU ID DO PROJETO
+    storageBucket: "comentarios-livro.appspot.com", // SEU BUCKET DE ARMAZENAMENTO
+    messagingSenderId: "702096545512", // SEU ID DO REMETENTE
+    appId: "1:702096545512:web:f7f305fe579d246c41b5d" // SEU ID DO APLICATIVO
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+
 const auth = firebase.auth();
-const commentsRef = db.ref("comentarios");
-const namesRef = db.ref("nomesUsados");
-const onlineRef = db.ref("logados");
-const bannedRef = db.ref("banidos");
+const database = firebase.database();
+const commentsRef = database.ref('comments'); // Alterado de "comentarios" para "comments" para consistência
+const usersRef = database.ref('users');
+const bannedUsersRef = database.ref('bannedUsers');
 
-const ADMIN_UID = "mIsJ6CcuSQdk8VkWayuekdMcn7L2"; // SUBSTITUA PELO SEU UID DE ADMIN REAL
-// AQUI VOCÊ DEVE ADICIONAR A URL DA IMAGEM DO ÍCONE DO ADMIN
-const ADMIN_ICON_URL = 'adm-icon.png'; // <---- SUBSTITUA ESTE VALOR PELA URL REAL DA SUA IMAGEM (ex: 'assets/admin_icon.png')
+// Referências do DOM
+const loginBtn = document.getElementById('login-btn');
+const logoutBtn = document.getElementById('logout-btn');
+const deleteAccountBtn = document.getElementById('delete-account');
+const nameInput = document.getElementById('name');
+const messageInput = document.getElementById('message');
+const commentForm = document.getElementById('comment-form');
+const commentsDiv = document.getElementById('comments');
+const userInfoP = document.getElementById('user-info');
+const userCountP = document.getElementById('user-count');
+const themeToggleBtn = document.getElementById('theme-toggle');
+const replyBox = document.getElementById('reply-box');
+const replyMessageSpan = replyBox.querySelector('.reply-message');
+const cancelReplyBtn = replyBox.querySelector('.cancel-reply-btn');
+const mentionSuggestionsUl = document.getElementById('mention-suggestions');
 
-const loginBtn = document.getElementById("login-btn");
-const logoutBtn = document.getElementById("logout-btn");
-const deleteBtn = document.getElementById("delete-account");
-const userInfo = document.getElementById("user-info");
-const userCount = document.getElementById("user-count");
-const form = document.getElementById("comment-form");
-const nameInput = document.getElementById("name");
-const messageInput = document.getElementById("message");
-const commentsDiv = document.getElementById("comments");
-const alertBox = document.getElementById("alert-box");
+// Modal Personalizado
+const customModal = document.getElementById('custom-modal');
+const modalMessage = document.getElementById('modal-message');
+const modalInput = document.getElementById('modal-input');
+const modalTextarea = document.getElementById('modal-textarea');
+const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+const modalCancelBtn = document.getElementById('modal-cancel-btn');
 
-// Custom Modal Elements
-const customModal = document.getElementById("custom-modal");
-const modalMessage = document.getElementById("modal-message");
-const modalInput = document.getElementById("modal-input");
-const modalTextarea = document.getElementById("modal-textarea");
-const modalConfirmBtn = document.getElementById("modal-confirm-btn");
-const modalCancelBtn = document.getElementById("modal-cancel-btn");
+// Alerta Personalizado
+const alertBox = document.getElementById('alert-box');
 
-// Reply functionality elements
-const replyBox = document.getElementById("reply-box");
-const replyMessageSpan = replyBox.querySelector(".reply-message");
-const cancelReplyBtn = replyBox.querySelector(".cancel-reply-btn");
+// Variáveis globais
+let currentUser = null;
+let currentUserName = "Anônimo";
+let isAdmin = false;
+let replyingToCommentId = null; // Para armazenar o ID do comentário ao qual estamos respondendo
+const ADMIN_UIDS = ["mIsJ6CcuSQdk8VkWayuekdMcn7L2"]; // SEU UID DO ADMINISTRADOR
+const ADMIN_ICON_URL = 'adm-icon.png'; // Caminho para a imagem do ícone de administrador
 
-let replyToCommentId = null;
-let replyToAuthorName = null;
-
-// Variáveis para garantir que dados essenciais estejam carregados
-let allUsersMap = {}; // Armazena { lowercaseName: { name: originalName, uid: uid } }
-let currentLoggedInUserUid = null;
-let currentLoggedInUserName = null;
-
-// Elementos para Modo Escuro/Claro
-const themeToggle = document.getElementById("theme-toggle"); // Botão ou switch para alternar
-const body = document.body; // O elemento body para aplicar a classe do tema
-
-// Função para aplicar o tema salvo
-function applyTheme(theme) {
-    if (theme === 'dark') {
-        body.classList.add('dark-mode');
-        localStorage.setItem('theme', 'dark');
-        if (themeToggle) themeToggle.textContent = 'Tema Claro';
-    } else {
-        body.classList.remove('dark-mode');
-        localStorage.setItem('theme', 'light');
-        if (themeToggle) themeToggle.textContent = 'Tema Escuro';
-    }
-}
-
-// Verifica o tema salvo no localStorage ou define um padrão
-const savedTheme = localStorage.getItem('theme') || 'dark'; // Padrão para dark agora
-applyTheme(savedTheme);
-
-// Event listener para o botão de alternar tema
-if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-        if (body.classList.contains('dark-mode')) {
-            applyTheme('light');
-        } else {
-            applyTheme('dark');
-        }
-    });
-}
-
-function showAlert(msg, isError = false) {
-    alertBox.textContent = msg;
-    alertBox.style.display = "block";
+// Função para mostrar alerta personalizado
+function showAlert(message, isError = false) {
+    alertBox.textContent = message;
+    alertBox.classList.remove('error-alert');
     if (isError) {
-        alertBox.classList.add("error-alert");
-    } else {
-        alertBox.classList.remove("error-alert");
+        alertBox.classList.add('error-alert');
     }
-    setTimeout(() => alertBox.style.display = "none", 4000);
+    alertBox.style.display = 'block';
+    setTimeout(() => {
+        alertBox.style.display = 'none';
+    }, 5000);
 }
 
-function showCustomPrompt(message, type = 'text', defaultValue = '') {
+// Função para formatar timestamp
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+}
+
+// Função para exibir o modal personalizado
+function showCustomModal(message, showInput = false, inputType = 'text', confirmText = 'Confirmar', cancelText = 'Cancelar', prefill = '', isTextarea = false) {
     return new Promise(resolve => {
         modalMessage.textContent = message;
         modalInput.style.display = 'none';
         modalTextarea.style.display = 'none';
-        modalConfirmBtn.style.display = 'inline-block';
-        modalCancelBtn.style.display = 'inline-block';
+        modalInput.value = '';
+        modalTextarea.value = '';
+        modalCancelBtn.style.display = 'none'; // Esconde por padrão
 
-        if (type === 'text') {
-            modalInput.value = defaultValue;
-            modalInput.style.display = 'block';
-            modalInput.focus();
-        } else if (type === 'textarea') {
-            modalTextarea.value = defaultValue;
-            modalTextarea.style.display = 'block';
-            modalTextarea.focus();
+        if (showInput) {
+            if (isTextarea) {
+                modalTextarea.style.display = 'block';
+                modalTextarea.value = prefill;
+            } else {
+                modalInput.style.display = 'block';
+                modalInput.type = inputType;
+                modalInput.value = prefill;
+            }
+            modalCancelBtn.style.display = 'inline-block'; // Mostra botão cancelar para inputs
         }
+
+        modalConfirmBtn.textContent = confirmText;
+        modalCancelBtn.textContent = cancelText;
 
         customModal.style.display = 'flex';
 
         const confirmHandler = () => {
-            const value = type === 'text' ? modalInput.value : modalTextarea.value;
             customModal.style.display = 'none';
             modalConfirmBtn.removeEventListener('click', confirmHandler);
             modalCancelBtn.removeEventListener('click', cancelHandler);
-            resolve(value);
+            resolve(showInput ? (isTextarea ? modalTextarea.value : modalInput.value) : true);
         };
 
         const cancelHandler = () => {
             customModal.style.display = 'none';
             modalConfirmBtn.removeEventListener('click', confirmHandler);
             modalCancelBtn.removeEventListener('click', cancelHandler);
-            resolve(null);
+            resolve(false); // Retorna falso se cancelar
         };
 
         modalConfirmBtn.addEventListener('click', confirmHandler);
@@ -135,407 +117,444 @@ function showCustomPrompt(message, type = 'text', defaultValue = '') {
     });
 }
 
-function showCustomAlert(message) {
-    return new Promise(resolve => {
-        modalMessage.textContent = message;
-        modalInput.style.display = 'none';
-        modalTextarea.style.display = 'none';
-        modalCancelBtn.style.display = 'none'; // No cancel for alert
-        modalConfirmBtn.textContent = 'Ok'; // Change button text for alert
-        customModal.style.display = 'flex';
-
-        const confirmHandler = () => {
-            customModal.style.display = 'none';
-            modalConfirmBtn.removeEventListener('click', confirmHandler);
-            modalConfirmBtn.textContent = 'Confirmar'; // Reset button text
-            resolve();
-        };
-        modalConfirmBtn.addEventListener('click', confirmHandler);
-    });
+// Função para alternar o tema (escuro/claro)
+function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+    // Salvar preferência no localStorage
+    if (document.body.classList.contains('dark-mode')) {
+        localStorage.setItem('theme', 'dark');
+    } else {
+        localStorage.setItem('theme', 'light');
+    }
 }
 
-// New functions for reply
-function startReply(commentId, authorName) {
-    replyToCommentId = commentId;
-    replyToAuthorName = authorName;
-    replyMessageSpan.textContent = `Respondendo a ${authorName}`;
-    replyBox.style.display = 'flex';
-    messageInput.focus();
+// Carregar preferência de tema ao iniciar
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'dark' || !savedTheme) { // Padrão é tema escuro
+    document.body.classList.add('dark-mode');
+} else {
+    document.body.classList.remove('dark-mode');
 }
 
-function cancelReply() {
-    replyToCommentId = null;
-    replyToAuthorName = null;
-    replyBox.style.display = 'none';
-    replyMessageSpan.textContent = '';
+themeToggleBtn.addEventListener('click', toggleTheme);
+
+// Função para processar markdown
+function processMarkdown(text) {
+    return marked.parse(text);
 }
 
-// Event listener for cancel reply button
-cancelReplyBtn.addEventListener('click', cancelReply);
+// Função para renderizar um único comentário
+async function renderComment(commentData, commentId) {
+    const commentDiv = document.createElement('div');
+    commentDiv.className = 'comment';
+    commentDiv.dataset.id = commentId; // Adiciona o ID do comentário ao dataset
 
-// Troca botão de registro/login
-loginBtn.textContent = "Registrar";
-loginBtn.addEventListener("click", () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    auth.signInWithPopup(provider).catch(error => {
-        showAlert(`Erro ao fazer login: ${error.message}`, true);
-    });
-});
+    let authorName = commentData.userName || "Anônimo";
+    let authorUid = commentData.userId;
+    let isOwnComment = (currentUser && currentUser.uid === authorUid);
+    let isAdminComment = ADMIN_UIDS.includes(authorUid);
 
-logoutBtn.addEventListener("click", () => {
-    const user = auth.currentUser;
-    if (user) {
-        onlineRef.child(user.uid).remove(); // Remove o status online
-        auth.signOut().then(() => {
-            // Não recarrega, a função onAuthStateChanged vai lidar com a interface
-        }).catch(error => {
-            showAlert(`Erro ao sair: ${error.message}`, true);
-        });
-    }
-});
-
-deleteBtn.addEventListener("click", async () => {
-    const user = auth.currentUser;
-    if (!user) {
-        showAlert("Nenhum usuário logado para apagar.", true);
-        return;
-    }
-    // Impedir que o ADMIN_UID apague a própria conta pelo botão
-    if (user.uid === ADMIN_UID) {
-        showAlert("Não é possível apagar a conta de administrador através desta opção.", true);
-        return;
-    }
-
-    const confirmDelete = await showCustomPrompt("Tem certeza que deseja apagar sua conta? Esta ação é irreversível.", "text", "sim");
-    if (confirmDelete !== "sim") {
-        showAlert("Operação cancelada.", true);
-        return;
-    }
-
-    try {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-        await user.reauthenticateWithPopup(provider);
-
-        await commentsRef.orderByChild("uid").equalTo(user.uid).once("value", snapshot => {
-            snapshot.forEach(child => child.ref.remove());
-        });
-        await namesRef.child(user.uid).remove();
-        await onlineRef.child(user.uid).remove();
-
-        await user.delete();
-
-        showAlert("Conta apagada com sucesso. Você foi desconectado.");
-        // Não recarrega, a função onAuthStateChanged vai lidar com a interface
-    } catch (error) {
-        console.error("Erro ao apagar conta:", error);
-        if (error.code === 'auth/requires-recent-login') {
-            await showCustomAlert("Por favor, faça login novamente para apagar sua conta. (Requerido para operações de segurança)");
-        } else if (error.code === 'auth/popup-closed-by-user') {
-            showAlert("Reautenticação cancelada pelo usuário. Conta não apagada.", true);
-        } else if (error.code === 'auth/cancelled-popup-request') {
-            showAlert("Reautenticação cancelada: janela de pop-up já aberta ou bloqueada. Tente novamente.", true);
-        } else {
-            showAlert(`Erro ao apagar conta: ${error.message}`, true);
+    // Verifica se o comentário atual é uma resposta a um comentário do usuário logado
+    let isReplyToMe = false;
+    if (currentUser && commentData.replyTo && commentData.replyTo.commentId) {
+        const originalCommentSnapshot = await database.ref(`comments/${commentData.replyTo.commentId}`).once('value');
+        const originalComment = originalCommentSnapshot.val();
+        if (originalComment && originalComment.userId === currentUser.uid) {
+            isReplyToMe = true;
         }
     }
-});
+    if (isReplyToMe) {
+        commentDiv.classList.add('is-reply-to-me');
+    }
 
-// Listener principal de autenticação
+    if (isOwnComment) {
+        commentDiv.classList.add('own');
+    }
+    if (isAdminComment) {
+        commentDiv.classList.add('admin');
+    }
+
+    let replyBlockHtml = '';
+    if (commentData.replyTo && commentData.replyTo.commentId) {
+        const originalCommentSnapshot = await database.ref(`comments/${commentData.replyTo.commentId}`).once('value');
+        const originalComment = originalCommentSnapshot.val();
+
+        let replyAuthor = originalComment ? (originalComment.userName || "Anônimo") : "Comentário excluído";
+        let replyMessageSnippet = originalComment ? (originalComment.message ? originalComment.message.substring(0, 50) + (originalComment.message.length > 50 ? '...' : '') : 'Mensagem sem conteúdo') : "Mensagem excluída";
+        let deletedClass = originalComment ? '' : ' comment-reply-deleted';
+
+        replyBlockHtml = `
+            <div class="comment-reply-block${deletedClass}">
+                <span class="reply-block-author">${replyAuthor}</span>
+                <span class="reply-block-message">${replyMessageSnippet}</span>
+            </div>
+        `;
+    }
+
+    commentDiv.innerHTML = `
+        ${replyBlockHtml}
+        <div class="comment-header">
+            ${isAdminComment ? `<img src="${ADMIN_ICON_URL}" alt="Admin Icon" class="admin-icon">` : ''}
+            <span class="comment-author">${authorName}</span>
+            <span class="comment-timestamp">${formatTimestamp(commentData.timestamp)}</span>
+        </div>
+        <div class="comment-message">${processMarkdown(commentData.message)}</div>
+        <div class="comment-actions">
+            <button class="reply-btn">Responder</button>
+            ${isOwnComment || isAdmin ? `<button class="edit-btn">Editar</button>` : ''}
+            ${isOwnComment || isAdmin ? `<button class="delete-btn">Apagar</button>` : ''}
+            ${isAdmin && !isOwnComment ? `<button class="ban-btn">Banir</button>` : ''}
+        </div>
+    `;
+
+    // Adicionar listeners para os botões dentro do comentário
+    if (commentDiv.querySelector('.reply-btn')) {
+        commentDiv.querySelector('.reply-btn').addEventListener('click', () => startReply(commentId, authorName, commentData.message));
+    }
+    if (commentDiv.querySelector('.edit-btn')) {
+        commentDiv.querySelector('.edit-btn').addEventListener('click', () => editComment(commentId, commentData.message));
+    }
+    if (commentDiv.querySelector('.delete-btn')) {
+        commentDiv.querySelector('.delete-btn').addEventListener('click', () => deleteComment(commentId, authorUid));
+    }
+    if (commentDiv.querySelector('.ban-btn')) {
+        commentDiv.querySelector('.ban-btn').addEventListener('click', () => banUser(authorUid, authorName));
+    }
+
+    return commentDiv;
+}
+
+// Função centralizada para carregar e exibir comentários
+async function loadAndDisplayComments() {
+    // Adiciona o listener on("value") para real-time updates
+    commentsRef.on("value", async snapshot => {
+        commentsDiv.innerHTML = ""; // Limpa os comentários existentes
+
+        const comments = [];
+        snapshot.forEach(childSnapshot => {
+            comments.push({ id: childSnapshot.key, ...childSnapshot.val() });
+        });
+
+        // Ordena os comentários do mais antigo para o mais novo para renderização inicial
+        // (Será exibido do mais novo para o mais antigo devido ao flex-direction-reverse no CSS)
+        comments.sort((a, b) => a.timestamp - b.timestamp);
+
+        for (const commentData of comments) {
+            const commentElement = await renderComment(commentData, commentData.id);
+            commentsDiv.appendChild(commentElement); // Adiciona ao final (será invertido pelo CSS)
+        }
+    });
+}
+
+
+// Gerenciamento de Autenticação
 auth.onAuthStateChanged(async user => {
-    currentLoggedInUserUid = user ? user.uid : null;
-    currentLoggedInUserName = null; // Resetar nome
-
+    currentUser = user;
+    // Carregar informações do usuário logado
     if (user) {
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-        deleteBtn.style.display = "inline-block";
-        nameInput.style.display = "none"; // Hide name input if logged in
+        const userSnapshot = await usersRef.child(user.uid).once('value');
+        const userData = userSnapshot.val();
 
-        const ban = await bannedRef.child(user.uid).once("value");
-        if (ban.exists()) {
-            await showCustomAlert("Você foi banido e será desconectado.");
-            auth.signOut(); // Desconecta o usuário banido
+        if (userData && userData.isBanned) {
+            showAlert("Sua conta foi banida. Você não pode fazer login.", true);
+            auth.signOut(); // Desloga o usuário banido
             return;
         }
 
-        const nameSnap = await namesRef.child(user.uid).once("value");
-        let nick;
+        currentUserName = userData ? userData.name : user.email;
+        nameInput.style.display = 'none';
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'inline-block';
+        deleteAccountBtn.style.display = 'inline-block';
+        isAdmin = ADMIN_UIDS.includes(user.uid);
+        userInfoP.textContent = `Logado como: ${currentUserName}${isAdmin ? ' (Admin)' : ''}`;
 
-        if (!nameSnap.exists()) {
-            let tryName;
-            let nameExists = true;
-            while (nameExists) {
-                tryName = await showCustomPrompt("Escolha um nome único:", "text");
-                if (!tryName) {
-                    auth.signOut(); // Se o usuário cancelar a escolha do nome, desloga
-                    return;
-                }
-                const exists = await namesRef.orderByValue().equalTo(tryName).once("value");
-                if (exists.exists()) {
-                    await showCustomAlert("Nome já está em uso. Por favor, escolha outro.");
-                } else {
-                    nameExists = false;
-                }
-            }
-            await namesRef.child(user.uid).set(tryName);
-            nick = tryName;
-        } else {
-            nick = nameSnap.val();
-        }
-
-        currentLoggedInUserName = nick; // Armazena o nome do usuário logado
-        userInfo.innerHTML = `👤 Logado como: <strong>${nick}</strong>`;
-        onlineRef.child(user.uid).set(true);
-        onlineRef.child(user.uid).onDisconnect().remove();
+        // NOVO: Recarregar comentários ao fazer login (para garantir permissões)
+        loadAndDisplayComments(); 
 
     } else {
-        loginBtn.textContent = "Registrar ou Fazer Login";
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-        deleteBtn.style.display = "none";
-        userInfo.innerHTML = "Faça login para comentar.";
-        nameInput.style.display = "inline-block"; // Show name input if not logged in
+        currentUser = null;
+        currentUserName = "Anônimo";
+        isAdmin = false;
+        nameInput.style.display = 'block';
+        loginBtn.style.display = 'inline-block';
+        logoutBtn.style.display = 'none';
+        deleteAccountBtn.style.display = 'none';
+        userInfoP.textContent = "Não logado";
+        
+        // NOVO: Recarregar comentários ao fazer logout (para garantir permissões como anônimo)
+        loadAndDisplayComments();
     }
-
-    renderAllComments();
+    updateUserCount();
 });
 
-
-
-
-form.addEventListener("submit", async e => {
-    e.preventDefault();
-    const user = auth.currentUser;
-    let userName = nameInput.value.trim();
-
-    if (!user && !userName) {
-        showAlert("Por favor, forneça seu nome ou faça login para comentar.", true);
+// Registrar/Login (usando o mesmo botão)
+loginBtn.addEventListener('click', async () => {
+    const action = await showCustomModal('Deseja Registrar ou Fazer Login?', true, 'email', 'Próximo', 'Cancelar', '', false);
+    if (!action) return;
+    const email = action;
+    if (!email) {
+        showAlert('Email não pode ser vazio.', true);
         return;
     }
 
-    if (user) {
-        const nickSnap = await namesRef.child(user.uid).once("value");
-        userName = nickSnap.exists() ? nickSnap.val() : "Anônimo";
+    const mode = await showCustomModal('Este email já está registrado? (SIM = Login, NÃO = Registrar)', false, 'text', 'SIM (Login)', 'NÃO (Registrar)', '', false);
+
+    if (mode === true) { // Login
+        const password = await showCustomModal('Digite sua senha para login:', true, 'password', 'Entrar', 'Cancelar', '', false);
+        if (password === false) return;
+
+        try {
+            await auth.signInWithEmailAndPassword(email, password);
+            showAlert('Login realizado com sucesso!');
+        } catch (error) {
+            showAlert(`Erro ao fazer login: ${error.message}`, true);
+        }
+    } else if (mode === false) { // Registrar
+        const name = await showCustomModal('Digite seu nome de usuário:', true, 'text', 'Próximo', 'Cancelar', '', false);
+        if (name === false) return;
+        if (!name) {
+            showAlert('Nome de usuário não pode ser vazio.', true);
+            return;
+        }
+
+        const password = await showCustomModal('Crie uma senha (min. 6 caracteres):', true, 'password', 'Registrar', 'Cancelar', '', false);
+        if (password === false) return;
+
+        try {
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            await database.ref(`users/${userCredential.user.uid}`).set({ // Use database.ref() diretamente
+                name: name,
+                email: email,
+                isBanned: false
+            });
+            showAlert('Conta registrada e login realizado com sucesso!');
+        } catch (error) {
+            showAlert(`Erro ao registrar: ${error.message}`, true);
+        }
+    }
+});
+
+// Logout
+logoutBtn.addEventListener('click', async () => {
+    try {
+        await auth.signOut();
+        showAlert('Logout realizado com sucesso!');
+    } catch (error) {
+        showAlert(`Erro ao fazer logout: ${error.message}`, true);
+    }
+});
+
+// Apagar Conta
+deleteAccountBtn.addEventListener('click', async () => {
+    const confirm = await showCustomModal('Tem certeza que deseja apagar sua conta? Esta ação é irreversível.', false, 'text', 'Sim, Apagar', 'Não, Cancelar');
+    if (confirm === true) {
+        try {
+            if (currentUser) {
+                await database.ref(`users/${currentUser.uid}`).remove(); // Use database.ref() diretamente
+                await currentUser.delete(); // Deleta a conta do Firebase Auth
+                showAlert('Conta apagada com sucesso!');
+            }
+        } catch (error) {
+            showAlert(`Erro ao apagar conta: ${error.message}. Por favor, faça login novamente e tente apagar.`, true);
+        }
+    }
+});
+
+
+// Atualizar contagem de usuários
+function updateUserCount() {
+    usersRef.once('value', snapshot => {
+        let count = 0;
+        snapshot.forEach(childSnapshot => {
+            const userData = childSnapshot.val();
+            if (!userData.isBanned) {
+                count++;
+            }
+        });
+        userCountP.textContent = `Usuários registrados: ${count}`;
+    });
+}
+
+// Envio de Comentários
+commentForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const message = messageInput.value.trim();
+    let name = nameInput.value.trim();
+
+    if (!message) {
+        showAlert('A mensagem não pode ser vazia.', true);
+        return;
     }
 
-    const text = messageInput.value.trim();
-    if (!text) return;
+    let userId = null;
+    if (currentUser) {
+        userId = currentUser.uid;
+        name = currentUserName; // Garante que o nome seja o do usuário logado
+    } else {
+        if (!name) {
+            showAlert('Por favor, digite seu nome.', true);
+            return;
+        }
+        userId = `anonymous_${Date.now()}`; // ID único para usuários anônimos
+    }
 
-    const commentData = {
-        uid: user ? user.uid : null,
-        name: userName,
-        message: text,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
+    const bannedSnapshot = await bannedUsersRef.child(userId).once('value');
+    if (bannedSnapshot.exists()) {
+        showAlert("Você foi banido e não pode enviar comentários.", true);
+        return;
+    }
+    if (currentUser) {
+        const userAuthSnapshot = await usersRef.child(currentUser.uid).once('value');
+        const userData = userAuthSnapshot.val();
+        if (userData && userData.isBanned) {
+            showAlert("Sua conta está banida. Você não pode enviar comentários.", true);
+            return;
+        }
+    }
+
+
+    const newComment = {
+        userId: userId,
+        userName: name,
+        message: message,
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        replyTo: replyingToCommentId ? { commentId: replyingToCommentId, userName: replyMessageSpan.dataset.replyAuthor, message: replyMessageSpan.dataset.replyMessageSnippet } : null
     };
 
-    if (replyToCommentId && replyToAuthorName) {
-        commentData.replyToId = replyToCommentId;
-        commentData.replyToAuthor = replyToAuthorName;
-    }
-
     try {
-        await commentsRef.push(commentData);
-        messageInput.value = "";
-        cancelReply(); // Limpa o modo de resposta após enviar
+        await commentsRef.push(newComment);
+        messageInput.value = '';
+        cancelReply(); // Limpa a caixa de resposta após o envio
+        showAlert('Comentário enviado!');
     } catch (error) {
         showAlert(`Erro ao enviar comentário: ${error.message}`, true);
     }
 });
 
-// Listener de comentários
-commentsRef.on("value", async snapshot => {
-    commentsDiv.innerHTML = "";
-    const commentsArray = [];
-    snapshot.forEach(child => {
-        commentsArray.push({ key: child.key, ...child.val() });
+// Iniciar Resposta
+function startReply(commentId, author, messageSnippet) {
+    replyingToCommentId = commentId;
+    replyMessageSpan.textContent = `Respondendo a ${author}: "${messageSnippet.substring(0, 50)}${messageSnippet.length > 50 ? '...' : ''}"`;
+    replyMessageSpan.dataset.replyAuthor = author; // Guarda nome do autor
+    replyMessageSpan.dataset.replyMessageSnippet = messageSnippet; // Guarda snippet da mensagem
+    replyBox.style.display = 'flex';
+    messageInput.focus(); // Coloca o foco no campo de mensagem
+}
+
+// Cancelar Resposta
+cancelReplyBtn.addEventListener('click', cancelReply);
+
+function cancelReply() {
+    replyingToCommentId = null;
+    replyMessageSpan.textContent = '';
+    replyBox.style.display = 'none';
+    delete replyMessageSpan.dataset.replyAuthor;
+    delete replyMessageSpan.dataset.replyMessageSnippet;
+}
+
+// Editar Comentário
+async function editComment(commentId, currentMessage) {
+    const newMessage = await showCustomModal('Editar comentário:', true, 'text', 'Salvar', 'Cancelar', currentMessage, true); // Usar textarea
+    if (newMessage !== false && newMessage.trim() !== '' && newMessage !== currentMessage) {
+        try {
+            await commentsRef.child(commentId).update({ message: newMessage });
+            showAlert('Comentário atualizado!');
+        } catch (error) {
+            showAlert(`Erro ao editar comentário: ${error.message}`, true);
+        }
+    } else if (newMessage.trim() === '') {
+        showAlert('Comentário não pode ser vazio.', true);
+    }
+}
+
+// Apagar Comentário
+async function deleteComment(commentId, authorUid) {
+    const confirmDelete = await showCustomModal('Tem certeza que deseja apagar este comentário?', false, 'text', 'Sim, Apagar', 'Não');
+    if (confirmDelete === true) {
+        try {
+            await commentsRef.child(commentId).remove();
+            showAlert('Comentário apagado!');
+        }
+        catch (error) {
+            showAlert(`Erro ao apagar comentário: ${error.message}`, true);
+        }
+    }
+}
+
+// Banir Usuário
+async function banUser(uid, name) {
+    if (!isAdmin) {
+        showAlert('Você não tem permissão para banir usuários.', true);
+        return;
+    }
+
+    if (ADMIN_UIDS.includes(uid)) {
+        showAlert('Você não pode banir um administrador.', true);
+        return;
+    }
+
+    const confirmBan = await showCustomModal(`Tem certeza que deseja banir o usuário ${name}? Ele será deslogado e não poderá mais enviar comentários.`, false, 'text', 'Sim, Banir', 'Não');
+    if (confirmBan === true) {
+        try {
+            await usersRef.child(uid).update({ isBanned: true });
+            await bannedUsersRef.child(uid).set(true); // Adiciona ao nó de banidos
+            // Tenta deslogar o usuário banido se ele estiver online (opcional, pode falhar se não estiver)
+            if (firebase.auth().currentUser && firebase.auth().currentUser.uid === uid) {
+                await firebase.auth().signOut();
+            }
+            showAlert(`${name} foi banido com sucesso.`);
+        } catch (error) {
+            showAlert(`Erro ao banir usuário: ${error.message}`, true);
+        }
+    }
+}
+
+// Autocompletar menções
+messageInput.addEventListener('input', async () => {
+    const text = messageInput.value;
+    const atIndex = text.lastIndexOf('@');
+    if (atIndex === -1 || atIndex === text.length - 1) {
+        mentionSuggestionsUl.innerHTML = '';
+        return;
+    }
+
+    const searchTerm = text.substring(atIndex + 1).toLowerCase();
+    
+    // Limpar sugestões antigas
+    mentionSuggestionsUl.innerHTML = '';
+
+    const usersSnapshot = await usersRef.once('value');
+    usersSnapshot.forEach(userChild => {
+        const userData = userChild.val();
+        if (userData.name && userData.name.toLowerCase().startsWith(searchTerm) && userData.name !== currentUserName) {
+            const li = document.createElement('li');
+            li.textContent = `@${userData.name}`;
+            li.addEventListener('click', () => {
+                const beforeAt = text.substring(0, atIndex);
+                messageInput.value = `${beforeAt}@${userData.name} `;
+                mentionSuggestionsUl.innerHTML = '';
+                messageInput.focus();
+            });
+            mentionSuggestionsUl.appendChild(li);
+        }
     });
 
-    commentsArray.sort((a, b) => a.timestamp - b.timestamp);
-
-    // Using Promise.all to fetch original comments in parallel for performance
-    const commentsWithReplyData = await Promise.all(commentsArray.map(async (c) => {
-        let replyToHtml = '';
-        let originalCommentAuthorUid = null; // Para verificar se o usuário logado foi o autor da mensagem original
-
-        if (c.replyToId && c.replyToAuthor) {
-            const originalCommentSnap = await commentsRef.child(c.replyToId).once("value");
-            if (originalCommentSnap.exists()) {
-                const originalComment = originalCommentSnap.val();
-                originalCommentAuthorUid = originalComment.uid; // Pega o UID do autor da mensagem original
-                // Take first 80 characters of the original message for snippet
-                const originalMessageSnippet = originalComment.message.substring(0, 80) + (originalComment.message.length > 80 ? '...' : '');
-                replyToHtml = `
-                    <div class="comment-reply-block">
-                        <span class="reply-block-author">${originalComment.name}</span>
-                        <span class="reply-block-message">${originalMessageSnippet}</span>
-                    </div>
-                `;
-            } else {
-                replyToHtml = `
-                    <div class="comment-reply-block comment-reply-deleted">
-                        <span class="reply-block-message">[Mensagem original apagada]</span>
-                    </div>
-                `;
-            }
-        }
-        return { ...c, replyToHtml: replyToHtml, originalCommentAuthorUid: originalCommentAuthorUid };
-    }));
-
-    // Renderiza cada comentário. Agora, passando o UID do usuário logado para renderMessage.
-    for (const c of commentsWithReplyData) {
-        const div = document.createElement("div");
-        div.className = "comment";
-
-        // NOVO: Adiciona classe para destaque de resposta *se for para o usuário logado*
-        if (currentLoggedInUserUid && c.replyToId && c.originalCommentAuthorUid === currentLoggedInUserUid) {
-            div.classList.add("is-reply-to-me");
-        }
-
-        if (currentLoggedInUserUid && currentLoggedInUserUid === c.uid) { // Usar currentLoggedInUserUid
-            div.classList.add("own");
-        }
-        if (c.uid === ADMIN_UID) {
-            div.classList.add("admin");
-        }
-
-        const date = new Date(c.timestamp);
-        const dataFormatada = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} - ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-
-        // Lógica para adicionar o ícone do admin
-        let adminIconHtml = '';
-        if (c.uid === ADMIN_UID) {
-            adminIconHtml = `<img src="${ADMIN_ICON_URL}" alt="Admin" class="admin-icon" title="Administrador">`;
-        }
-
-        div.innerHTML = `
-            <div class="comment-header">
-                ${adminIconHtml} <span class="comment-author">${c.name}</span>
-                <span class="comment-timestamp">(${dataFormatada})</span>
-            </div>
-            ${c.replyToHtml} <div class="comment-message">${renderMessage(c.message, c.uid, currentLoggedInUserUid)}</div>
-        `;
-
-        const actionsDiv = document.createElement("div");
-        actionsDiv.className = "comment-actions";
-
-        const replyBtn = document.createElement("button");
-        replyBtn.textContent = "Responder";
-        replyBtn.onclick = () => {
-            startReply(c.key, c.name); // Use c.key (comment ID) and c.name for reply
-        };
-        actionsDiv.append(replyBtn);
-
-        if (currentLoggedInUserUid && currentLoggedInUserUid === c.uid) { // Usar currentLoggedInUserUid
-            const editBtn = document.createElement("button");
-            editBtn.textContent = "Editar";
-            editBtn.onclick = async () => {
-                const novoTexto = await showCustomPrompt("Edite sua mensagem:", "textarea", c.message);
-                if (novoTexto !== null) {
-                    if (novoTexto.trim() !== "") {
-                        commentsRef.child(c.key).update({ message: novoTexto });
-                    } else {
-                        showAlert("Mensagem não pode ser vazia.", true);
-                    }
-                }
-            };
-
-            const deleteOwnBtn = document.createElement("button");
-            deleteOwnBtn.textContent = "Apagar Mensagem";
-            deleteOwnBtn.onclick = async () => {
-                const confirmDelete = await showCustomPrompt("Tem certeza que deseja apagar esta mensagem?", "text", "sim");
-                if (confirmDelete === "sim") {
-                    commentsRef.child(c.key).remove();
-                    showAlert("Mensagem apagada.");
-                } else {
-                    showAlert("Operação cancelada.", true);
-                }
-            };
-            actionsDiv.append(editBtn, deleteOwnBtn);
-        }
-
-        // Ação de admin para banir/apagar (apenas se o admin estiver logado e não for o próprio admin)
-        if (currentLoggedInUserUid === ADMIN_UID && c.uid !== ADMIN_UID) {
-            const adminBox = document.createElement("div");
-            adminBox.className = "admin-buttons";
-
-            const del = document.createElement("button");
-            del.textContent = "🗑️ Apagar";
-            del.onclick = async () => {
-                const confirmDel = await showCustomPrompt("Tem certeza que deseja apagar esta mensagem?", "text", "sim");
-                if (confirmDel === "sim") {
-                    commentsRef.child(c.key).remove();
-                    showAlert("Mensagem apagada pelo admin.");
-                } else {
-                    showAlert("Operação cancelada.", true);
-                }
-            };
-
-            const ban = document.createElement("button");
-            ban.textContent = "🚫 Banir Usuário";
-            ban.onclick = async () => {
-                const confirmBan = await showCustomPrompt(`Tem certeza que deseja banir ${c.name}? Isso também apagará os comentários dele.`, "text", "sim");
-                if (confirmBan === "sim") {
-                    bannedRef.child(c.uid).set(true);
-                    await showCustomAlert(`${c.name} foi banido.`);
-                    await commentsRef.orderByChild("uid").equalTo(c.uid).once("value", snapshot => {
-                        snapshot.forEach(child => child.ref.remove());
-                    });
-                    onlineRef.child(c.uid).remove();
-                } else {
-                    showAlert("Operação cancelada.", true);
-                }
-            };
-            adminBox.append(del, ban);
-            actionsDiv.appendChild(adminBox);
-        }
-
-        if (actionsDiv.children.length > 0) {
-            div.appendChild(actionsDiv);
-        }
-
-        commentsDiv.appendChild(div);
+    if (mentionSuggestionsUl.children.length > 0) {
+        mentionSuggestionsUl.style.display = 'block';
+    } else {
+        mentionSuggestionsUl.style.display = 'none';
     }
 });
 
-// Carrega todos os nomes registrados no sistema (mantido para compatibilidade, mesmo sem menções ativas)
-namesRef.on("value", async snap => {
-    allUsersMap = {}; // Resetar mapa para garantir que esteja atualizado
-
-    snap.forEach(child => {
-        const uid = child.key;
-        const name = child.val();
-        allUsersMap[name.toLowerCase()] = { name: name, uid: uid };
-    });
-
-    renderAllComments();
+// Esconder sugestões de menção ao clicar fora
+document.addEventListener('click', (e) => {
+    if (!mentionSuggestionsUl.contains(e.target) && e.target !== messageInput) {
+        mentionSuggestionsUl.style.display = 'none';
+    }
 });
 
-function renderAllComments() {
-    commentsRef.once("value");
-}
-
-// Função para aplicar markdown (menções removidas)
-function renderMessage(text, authorUid, currentLoggedInUserUid) {
-    if (!text) return "";
-    let html = marked.parse(text);
-    return html;
-}
-
-const mentionBox = document.getElementById("mention-suggestions");
-
-// Removendo listener de menções se ele não for mais usado
-if (messageInput && mentionBox) { // Adicionado verificação para garantir que os elementos existem
-    messageInput.addEventListener("input", async (e) => {
-        // Lógica de sugestão de menções removida para focar na solicitação do usuário
-        // Oculta a caixa de sugestões
-        mentionBox.style.display = "none";
-    });
-
-    document.addEventListener("click", (e) => {
-        if (!mentionBox.contains(e.target)) {
-            mentionBox.style.display = "none";
-        }
-    });
-}
+// Inicialização (garante que os comentários são carregados na primeira vez)
+// Removendo o listener commentsRef.on("value") daqui e movendo para dentro de onAuthStateChanged
+// Isso garante que os comentários são carregados ou recarregados sempre que o estado de autenticação muda.
+// commentsRef.on("value", async snapshot => { ... }); // LINHA REMOVIDA DAQUI
