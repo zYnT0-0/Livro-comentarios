@@ -352,7 +352,7 @@ body:not(.dark-mode) .comment-reply-block.comment-reply-deleted {
     font-style: normal; /* No italics for deleted message text */
     color: #f04747;
 }
-body:not(.dark-mode) .comment-reply-block.comment-reply-deleted .reply-block-message {
+body:not(.dark-mode) .comment-reply-block.comment-reply-deleted {
     color: #dc3545;
 }
 
@@ -385,6 +385,22 @@ body:not(.dark-mode) .comment-reply-block.comment-reply-deleted .reply-block-mes
     border-radius: 4px;
     font-size: 0.9em;
 }
+
+/* NOVO: Media query para telas menores que 480px */
+@media (max-width: 480px) {
+    body {
+        padding: 10px; /* Reduz o padding para dar mais espaço ao conteúdo */
+    }
+    .container {
+        padding: 20px; /* Ajusta o padding interno do container */
+    }
+    #user-controls button,
+    #user-controls select {
+        font-size: 0.8em; /* Ajusta o tamanho da fonte dos botões de controle */
+        padding: 8px 10px;
+    }
+}
+
   </style>
 </head>
 <body>
