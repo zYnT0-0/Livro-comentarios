@@ -188,7 +188,7 @@ logoutBtn.addEventListener("click", () => {
     if (user) {
         onlineRef.child(user.uid).remove(); // Remove o status online
         auth.signOut().then(() => {
-            // Não recarrega, a função onAuthStateChanged vai lidar com a interface
+            location.reload(); // Recarrega a página após o logout
         }).catch(error => {
             showAlert(`Erro ao sair: ${error.message}`, true);
         });
@@ -227,7 +227,7 @@ deleteBtn.addEventListener("click", async () => {
         await user.delete();
 
         showAlert("Conta apagada com sucesso. Você foi desconectado.");
-        // Não recarrega, a função onAuthStateChanged vai lidar com a interface
+        location.reload(); // Recarrega a página após apagar a conta
     } catch (error) {
         console.error("Erro ao apagar conta:", error);
         if (error.code === 'auth/requires-recent-login') {
@@ -281,6 +281,7 @@ auth.onAuthStateChanged(async user => {
             }
             await namesRef.child(user.uid).set(tryName);
             nick = tryName;
+            location.reload(); // Recarrega a página após registrar um novo nome
         } else {
             nick = nameSnap.val();
         }
