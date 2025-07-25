@@ -74,7 +74,7 @@ body {
     /* Garante espaço no final da tela em celulares */
 
     
-    padding-bottom: 80px;
+  
     
 
     
@@ -476,6 +476,14 @@ body:not(.dark-mode) .comment-reply-block.comment-reply-deleted .reply-block-mes
         min-width: fit-content; /* Garante que o texto não seja cortado */
     }
 }
+
+    html, body {
+    height: auto;
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding-bottom: 80px; /* espaço visível no final da rolagem */
+    overflow-y: auto;
+    }
 
   </style>
 </head>
