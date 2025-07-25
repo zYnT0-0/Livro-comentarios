@@ -178,10 +178,18 @@ loginBtn.textContent = "Registrar";
 loginBtn.addEventListener("click", () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-    auth.signInWithPopup(provider).catch(error => {
-        showAlert(`Erro ao fazer login: ${error.message}`, true);
-    });
+
+    auth.signInWithPopup(provider)
+        .catch(error => {
+            // Se for erro de popup bloqueado, envia mensagem ao site principal (pai do iframe)
+            if (error.code === 'auth/popup-blocked') {
+                window.parent.postMessage('auth/popup-blocked', '*');
+            }
+
+            showAlert(`Erro ao fazer login: ${error.message}`, true);
+        });
 });
+
 
 logoutBtn.addEventListener("click", () => {
     const user = auth.currentUser;
