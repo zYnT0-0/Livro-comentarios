@@ -71,7 +71,10 @@ body {
     align-items: center;
     min-height: 100vh;
     transition: background-color 0.3s ease, color 0.3s ease; /* Transição suave para tema */
-  
+    /* Garante espaço no final da tela em celulares */
+
+    padding-bottom: env(safe-area-inset-bottom, 84px);
+
     
 }
 .container {
