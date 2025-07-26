@@ -147,7 +147,7 @@ function showCustomAlert(message) {
 window.addEventListener("focus", () => {
     const lastVisit = sessionStorage.getItem("lastVisit");
     const now = Date.now();
-    if (!lastVisit || now - lastVisit > 2 * 60 * 1000) location.reload();
+    if (!lastVisit || now - lastVisit > 60 * 1000) location.reload();
     sessionStorage.setItem("lastVisit", now);
 });
 
