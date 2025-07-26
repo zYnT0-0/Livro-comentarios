@@ -180,18 +180,17 @@ loginBtn.addEventListener("click", () => {
     provider.setCustomParameters({ prompt: 'select_account' });
 
     auth.signInWithPopup(provider)
-    .then(() => {
-        window.location.reload(); // 🔁 Reload automático após login bem-sucedido
-    })
-    .catch(error => {
-        if (error.code === 'auth/popup-blocked') {
-            window.parent.postMessage('auth/popup-blocked', '*');
-        }
+        .then(() => {
+            window.location.reload(); // 🔁 Recarrega após login
+        })
+        .catch(error => {
+            if (error.code === 'auth/popup-blocked') {
+                window.parent.postMessage('auth/popup-blocked', '*');
+            }
 
-        showAlert(`Erro ao fazer login: ${error.message}`, true);
-    });
-}); // <--- CHAVE DE FECHAMENTO ADICIONADA AQUI!
-
+            showAlert(`Erro ao fazer login: ${error.message}`, true);
+        });
+});
 
 logoutBtn.addEventListener("click", () => {
     const user = auth.currentUser;
