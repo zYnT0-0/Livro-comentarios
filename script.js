@@ -180,15 +180,16 @@ loginBtn.addEventListener("click", () => {
     provider.setCustomParameters({ prompt: 'select_account' });
 
     auth.signInWithPopup(provider)
-        .catch(error => {
-            // Se for erro de popup bloqueado, envia mensagem ao site principal (pai do iframe)
-            if (error.code === 'auth/popup-blocked') {
-                window.parent.postMessage('auth/popup-blocked', '*');
-            }
+    .then(() => {
+        window.location.reload(); // 🔁 Reload automático após login bem-sucedido
+    })
+    .catch(error => {
+        if (error.code === 'auth/popup-blocked') {
+            window.parent.postMessage('auth/popup-blocked', '*');
+        }
 
-            showAlert(`Erro ao fazer login: ${error.message}`, true);
-        });
-});
+        showAlert(`Erro ao fazer login: ${error.message}`, true);
+    });
 
 
 logoutBtn.addEventListener("click", () => {
@@ -348,6 +349,7 @@ form.addEventListener("submit", async e => {
         await commentsRef.push(commentData);
         messageInput.value = "";
         cancelReply(); // Limpa o modo de resposta após enviar
+        window.location.reload(); // 🔁 Reload após envio da mensagem // Limpa o modo de resposta após enviar
     } catch (error) {
         showAlert(`Erro ao enviar comentário: ${error.message}`, true);
     }
@@ -548,3 +550,14 @@ if (messageInput && mentionBox) { // Adicionado verificação para garantir que 
         }
     });
 }
+// 🔄 Reload automático ao voltar para a aba após mais de 2 minutos fora
+window.addEventListener("focus", () => {
+    const lastVisit = sessionStorage.getItem("lastVisit");
+    const now = Date.now();
+
+    if (!lastVisit || now - lastVisit > 2 * 60 * 1000) {
+        location.reload();
+    }
+
+    sessionStorage.setItem("lastVisit", now);
+});
