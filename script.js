@@ -561,3 +561,17 @@ window.addEventListener("focus", () => {
     sessionStorage.setItem("lastVisit", now);
 });
                 
+
+document.addEventListener("DOMContentLoaded", () => {
+  const isMiBrowser = navigator.userAgent.toLowerCase().includes('miuibrowser');
+  
+  if (isMiBrowser) {
+    const toggleBtn = document.getElementById('comments-toggle');
+    if (toggleBtn) {
+      toggleBtn.style.top = '10px';
+      toggleBtn.style.right = '10px';
+      toggleBtn.style.bottom = 'auto';
+      toggleBtn.style.left = 'auto';
+    }
+  }
+});
