@@ -1,4 +1,5 @@
-Const firebaseConfig = {
+// Firebase Config
+const firebaseConfig = {
     apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",
     authDomain: "comentarios-livro.firebaseapp.com",
     databaseURL: "https://comentarios-livro-default-rtdb.firebaseio.com",
@@ -16,9 +17,8 @@ const namesRef = db.ref("nomesUsados");
 const onlineRef = db.ref("logados");
 const bannedRef = db.ref("banidos");
 
-const ADMIN_UID = "mIsJ6CcuSQdk8VkWayuekdMcn7L2"; // SUBSTITUA PELO SEU UID DE ADMIN REAL
-// AQUI VOCÊ DEVE ADICIONAR A URL DA IMAGEM DO ÍCONE DO ADMIN
-const ADMIN_ICON_URL = 'adm-icon.png'; // <---- SUBSTITUA ESTE VALOR PELA URL REAL DA SUA IMAGEM (ex: 'assets/admin_icon.png')
+const ADMIN_UID = "mIsJ6CcuSQdk8VkWayuekdMcn7L2";
+const ADMIN_ICON_URL = 'adm-icon.png';
 
 const loginBtn = document.getElementById("login-btn");
 const logoutBtn = document.getElementById("logout-btn");
@@ -31,7 +31,7 @@ const messageInput = document.getElementById("message");
 const commentsDiv = document.getElementById("comments");
 const alertBox = document.getElementById("alert-box");
 
-// Custom Modal Elements
+// Modal Elements
 const customModal = document.getElementById("custom-modal");
 const modalMessage = document.getElementById("modal-message");
 const modalInput = document.getElementById("modal-input");
@@ -39,24 +39,21 @@ const modalTextarea = document.getElementById("modal-textarea");
 const modalConfirmBtn = document.getElementById("modal-confirm-btn");
 const modalCancelBtn = document.getElementById("modal-cancel-btn");
 
-// Reply functionality elements
+// Reply Elements
 const replyBox = document.getElementById("reply-box");
 const replyMessageSpan = replyBox.querySelector(".reply-message");
 const cancelReplyBtn = replyBox.querySelector(".cancel-reply-btn");
 
 let replyToCommentId = null;
 let replyToAuthorName = null;
-
-// Variáveis para garantir que dados essenciais estejam carregados
-let allUsersMap = {}; // Armazena { lowercaseName: { name: originalName, uid: uid } }
+let allUsersMap = {};
 let currentLoggedInUserUid = null;
 let currentLoggedInUserName = null;
 
-// Elementos para Modo Escuro/Claro
-const themeToggle = document.getElementById("theme-toggle"); // Botão ou switch para alternar
-const body = document.body; // O elemento body para aplicar a classe do tema
+// Theme Handling
+const themeToggle = document.getElementById("theme-toggle");
+const body = document.body;
 
-// Função para aplicar o tema salvo
 function applyTheme(theme) {
     if (theme === 'dark') {
         body.classList.add('dark-mode');
@@ -68,12 +65,8 @@ function applyTheme(theme) {
         if (themeToggle) themeToggle.textContent = 'Tema Escuro';
     }
 }
-
-// Verifica o tema salvo no localStorage ou define um padrão
-const savedTheme = localStorage.getItem('theme') || 'dark'; // Padrão para dark agora
+const savedTheme = localStorage.getItem('theme') || 'dark';
 applyTheme(savedTheme);
-
-// Event listener para o botão de alternar tema
 if (themeToggle) {
     themeToggle.addEventListener('click', () => {
         if (body.classList.contains('dark-mode')) {
@@ -87,11 +80,7 @@ if (themeToggle) {
 function showAlert(msg, isError = false) {
     alertBox.textContent = msg;
     alertBox.style.display = "block";
-    if (isError) {
-        alertBox.classList.add("error-alert");
-    } else {
-        alertBox.classList.remove("error-alert");
-    }
+    alertBox.classList.toggle("error-alert", isError);
     setTimeout(() => alertBox.style.display = "none", 4000);
 }
 
@@ -140,19 +129,27 @@ function showCustomAlert(message) {
         modalMessage.textContent = message;
         modalInput.style.display = 'none';
         modalTextarea.style.display = 'none';
-        modalCancelBtn.style.display = 'none'; // No cancel for alert
-        modalConfirmBtn.textContent = 'Ok'; // Change button text for alert
+        modalCancelBtn.style.display = 'none';
+        modalConfirmBtn.textContent = 'Ok';
         customModal.style.display = 'flex';
 
         const confirmHandler = () => {
             customModal.style.display = 'none';
             modalConfirmBtn.removeEventListener('click', confirmHandler);
-            modalConfirmBtn.textContent = 'Confirmar'; // Reset button text
+            modalConfirmBtn.textContent = 'Confirmar';
             resolve();
         };
         modalConfirmBtn.addEventListener('click', confirmHandler);
     });
 }
+
+// 🔄 Reload ao voltar para o site após 2 minutos
+window.addEventListener("focus", () => {
+    const lastVisit = sessionStorage.getItem("lastVisit");
+    const now = Date.now();
+    if (!lastVisit || now - lastVisit > 2 * 60 * 1000) location.reload();
+    sessionStorage.setItem("lastVisit", now);
+});
 
 // New functions for reply
 function startReply(commentId, authorName) {
