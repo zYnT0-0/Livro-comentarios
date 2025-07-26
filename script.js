@@ -568,10 +568,9 @@ document.addEventListener("DOMContentLoaded", () => {
   if (isMiBrowser) {
     const toggleBtn = document.getElementById('comments-toggle');
     if (toggleBtn) {
-      toggleBtn.style.top = '10px';
       toggleBtn.style.right = '10px';
-      toggleBtn.style.bottom = 'auto';
-      toggleBtn.style.left = 'auto';
+      toggleBtn.style.bottom = '180px';
+      
     }
   }
 });
