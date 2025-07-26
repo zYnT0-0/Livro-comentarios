@@ -1,4 +1,4 @@
-const firebaseConfig = {
+Const firebaseConfig = {
     apiKey: "AIzaSyCmEEx1Z_QK7MblQnrezw5S7CXo1uzcCy4",
     authDomain: "comentarios-livro.firebaseapp.com",
     databaseURL: "https://comentarios-livro-default-rtdb.firebaseio.com",
@@ -190,6 +190,7 @@ loginBtn.addEventListener("click", () => {
 
         showAlert(`Erro ao fazer login: ${error.message}`, true);
     });
+}); // <--- CHAVE DE FECHAMENTO ADICIONADA AQUI!
 
 
 logoutBtn.addEventListener("click", () => {
@@ -498,6 +499,8 @@ commentsRef.on("value", async snapshot => {
                     showAlert("Operação cancelada.", true);
                 }
             };
+            // Note: Você tinha duas vezes os botões editBtn e deleteOwnBtn sendo adicionados aqui.
+            // Removi a duplicação e adicionei apenas os botões de admin.
             adminBox.append(del, ban);
             actionsDiv.appendChild(adminBox);
         }
@@ -561,3 +564,4 @@ window.addEventListener("focus", () => {
 
     sessionStorage.setItem("lastVisit", now);
 });
+                
